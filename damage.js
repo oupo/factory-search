@@ -41,7 +41,7 @@ function isToZero(userPoke, foePoke, waza) {
 		return true;
 	if (waza.type == "ほのお" && foePoke.ability == "もらいび")
 		return true;
-	if (waza.type == "でんき" && (foePoke.ability == "ちくでん" || forPoke.ability == "でんきエンジン"))
+	if (waza.type == "でんき" && (foePoke.ability == "ちくでん" || foePoke.ability == "でんきエンジン"))
 		return true;
 	// ignore ぼうおん
 	return false;
