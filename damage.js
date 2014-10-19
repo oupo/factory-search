@@ -1,5 +1,15 @@
 "use strict";
 
+function calcComputedSpeed(poke) {
+    if (poke.item == "こだわりスカーフ") {
+        return int(poke.speed * 1.5);
+    }
+    if (poke.item == "くろいてっきゅう") {
+        return int(poke.speed * 0.5);
+    }
+    return poke.speed;
+}
+
 function calcDamage(userPoke, foePoke, waza) {
     if (isToZero(userPoke, foePoke, waza)) return 0;
     var ch = 1; // 急所はなし
