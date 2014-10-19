@@ -8,15 +8,35 @@
 <script src="damage.js"></script>
 <script>
 $(function () {
-                initialize_factory(function () {
-                        var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
-                        var kame = gen_poke(RANK_OPEN_8, true, factory_data[353], 0);
-                        var brave = waza_fromname[mukuho.entry.move[0]];
-                        console.log(mukuho);
-                        console.log(kame);
-                        console.log(brave);
-                        console.log(calcDamage(mukuho, kame, brave));
-                });
+	initialize_factory(function () {
+		var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
+		var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"]
+		var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
+		var brave = waza_fromname[mukuho.entry.move[0]];
+		for (var i = 351; i <= 950; i ++) {
+			// 2つの特性両方試す
+			var target = gen_poke(RANK_OPEN_8, true, factory_data[i], 0);
+			var dmg1 = calcDamage(mukuho, target, brave);
+			var target = gen_poke(RANK_OPEN_8, true, factory_data[i], 1);
+			var dmg2 = calcDamage(mukuho, target, brave);
+			var dmg = Math.min(dmg1, dmg2);
+			var damageOk = dmg >= target.hp;
+
+			var speedOk = calcComputedSpeed(target) < calcComputedSpeed(mukuho);
+			var itemOk = ng_items.indexOf(target.item) < 0;
+			var badAbility = target.entry.pokemon.abilities.filter(function(x) ng_abilities.indexOf(x) >= 0);
+			var abilityOk = badAbility.length == 0;
+			var ok = speedOk && damageOk && itemOk && abilityOk;
+
+			var msg = target.name+":";
+			msg += (speedOk ? "" : " speedNG("+calcComputedSpeed(target)+")");
+			msg += (damageOk ? "" : " damageNG("+dmg+" / "+target.hp+")");
+			msg += (itemOk ? "" : " itemNG("+target.item+")");
+			msg += (abilityOk ? "" : " abilityNG("+badAbility.join(",")+")");
+			msg += (ok ? " OK" : "");
+			if (!ok) console.log(msg);
+		}
+	});
 });
 </script>
 </head>
