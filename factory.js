@@ -98,7 +98,7 @@ function initialize_pokemon_data(pokedex_csv_text) {
 	for (var i = 0; i < lines.length; i ++) {
 		var row = lines[i].split(",");
 		var name = row[0];
-		var stats = map(row.slice(1, 1 + 6), Number);
+		var stats = row.slice(1, 1 + 6).map(Number);
 		var ability1 = row[7];
 		var ability2 = row[8] || ability1;
 		var gender_boundary = boundaries[row[9]];
@@ -126,7 +126,7 @@ function initialize_factory_entries(factory_data_text) {
 			id: i,
 			name:   row[1],
 			pokemon: pokemon,
-			nature: indexof(natures, row[2]),
+			nature: natures.indexOf(row[2]),
 			item:   row[3],
 			move:   row[4],
 			effort: omit_effort_text(row[5])
@@ -373,7 +373,7 @@ function omit_effort_text(text) {
 	var list = text.split("/");
 	var result = "";
 	for (var i = 0; i < list.length; i ++) {
-		result += "HABCDS".charAt(indexof(status_names, list[i]));
+		result += "HABCDS".charAt(status_names.indexOf(list[i]));
 	}
 	return result;
 }
@@ -671,11 +671,6 @@ function elementWithIn(elem1, elem2) {
 	}
 	return false;
 }
-
-function escapeHTML(value) {
-	return value.replace(/[&<>"]/g, function(s) { return escapeHTML.map[s]; }); // "
-}
-escapeHTML.map = {"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"};
 
 function get_parent_element(e, tagName) {
 	tagName = tagName.toUpperCase();

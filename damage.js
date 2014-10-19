@@ -163,5 +163,7 @@ function calcDamage0(level, basePower, atk, def, mod1, ch, mod2, r, stab, type1,
 	return x4;
 }
 
-console.log(calcDamage0(47, 60, 140, 77, 1, 1, 1, 85, 1.5, 2, 1, []));
-console.log(calcDamage({level: 47, atk: 140, type1: "ノーマル", type2: "ひこう"}, {def: 77, type1: "くさ", type2: "どく"}, {basePower: 60, isPhysical: true, type: "ひこう"}));
+function damageTest() {
+    console.log(calcDamage0(47, 60, 140, 77, 1, 1, 1, 85, 1.5, 2, 1, []));
+    console.log(calcDamage({level: 47, atk: 140, type1: "ノーマル", type2: "ひこう"}, {def: 77, type1: "くさ", type2: "どく"}, {basePower: 60, isPhysical: true, type: "ひこう"}));
+}
