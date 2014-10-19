@@ -3,6 +3,7 @@ var pokemon_data = null;
 var pokemon_name2id = null;
 var trainer_names = null;
 var waza_data = null;
+var waza_fromname = null;
 var natures = "がんばりや さみしがり ゆうかん いじっぱり やんちゃ ずぶとい すなお のんき わんぱく のうてんき おくびょう せっかち まじめ ようき むじゃき ひかえめ おっとり れいせい てれや うっかりや おだやか おとなしい なまいき しんちょう きまぐれ".split(" ");
 var rank_entries_count = [null, 150, 100, 100, 136, 136, 136, 136];
 var rank_entries_start;
@@ -196,21 +197,23 @@ function initialize_waza(waza_csv_text) {
 	lines.shift(); // ヘッダ行を除去
 	if (lines[lines.length - 1] === "") lines.pop();
 	waza_data = new Array(1 + lines.length);
+	waza_fromname = {};
 	for (var i = 0; i < lines.length; i ++) {
 		var row = lines[i].split(",");
 		var name = row[1];
-		var power = Number(row[2]);
+		var basePower = Number(row[2]);
 		var accuracy = Number(row[3]);
 		var type = row[5];
 		var isPhysical = row[6] == "物理";
-		waza_data[i +1] = {
+		waza_data[i + 1] = {
 			id: i + 1,
 			name: name,
-			power: power,
+			basePower: basePower,
 			accuracy: accuracy,
 			type: type,
 			isPhysical: isPhysical,
 		};
+		waza_fromname[name] = waza_data[i + 1];
 	}
 }
 
@@ -438,7 +441,8 @@ function gen_poke(rank, is_open_level, entry, ability_index) {
 		item: entry.item,
 		ability: pokemon.abilities[ability_index],
 		type1: pokemon.type1,
-		type2: pokemon.type2
+		type2: pokemon.type2,
+		entry: entry
 	};
 }
 
