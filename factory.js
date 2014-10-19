@@ -2,6 +2,7 @@ var factory_data = null;
 var pokemon_data = null;
 var pokemon_name2id = null;
 var trainer_names = null;
+var waza_data = null;
 var natures = "がんばりや さみしがり ゆうかん いじっぱり やんちゃ ずぶとい すなお のんき わんぱく のうてんき おくびょう せっかち まじめ ようき むじゃき ひかえめ おっとり れいせい てれや うっかりや おだやか おとなしい なまいき しんちょう きまぐれ".split(" ");
 var rank_entries_count = [null, 150, 100, 100, 136, 136, 136, 136];
 var rank_entries_start;
@@ -67,6 +68,7 @@ function initialize_factory(callback) {
 	var factory_data_text;
 	var pokedex_csv_text;
 	var trainer_names_text;
+	var waza_csv_text;
 	$.ajax({dataType: "text", url: "factory_data.txt", success: function(data) {
 		factory_data_text = data;
 		boot();
@@ -79,12 +81,17 @@ function initialize_factory(callback) {
 		trainer_names_text = data;
 		boot();
 	}});
+	$.ajax({dataType: "text", url: "waza.csv", success: function(data) {
+		waza_csv_text = data;
+		boot();
+	}});
 	function boot() {
-		if (!factory_data_text || !pokedex_csv_text || !trainer_names_text) return;
+		if (!factory_data_text || !pokedex_csv_text || !trainer_names_text || !waza_csv_text) return;
 		initialize_pokemon_data(pokedex_csv_text);
 		initialize_factory_entries(factory_data_text);
 		set_pokemon_data_group();
 		initialize_trainer_names(trainer_names_text);
+		initialize_waza(waza_csv_text);
 		callback();
 	}
 }
@@ -102,6 +109,7 @@ function initialize_pokemon_data(pokedex_csv_text) {
 		var ability1 = row[7];
 		var ability2 = row[8] || ability1;
 		var gender_boundary = boundaries[row[9]];
+		var type = row[10].split("/");
 		pokemon_name2id[name] = i;
 		pokemon_data[i] = {
 			id: i,
@@ -109,6 +117,8 @@ function initialize_pokemon_data(pokedex_csv_text) {
 			stats: stats,
 			abilities: [ability1, ability2],
 			gender_boundary: gender_boundary,
+			type1: type[0],
+			type2: type[1] || type[0],
 			group: null,
 			id_in_group: null
 		};
@@ -180,6 +190,30 @@ function initialize_trainer_names(trainer_names_text) {
 		lines.push("");
 	}
 }
+
+function initialize_waza(waza_csv_text) {
+	var lines = waza_csv_text.split("\n");
+	lines.shift(); // ヘッダ行を除去
+	if (lines[lines.length - 1] === "") lines.pop();
+	waza_data = new Array(1 + lines.length);
+	for (var i = 0; i < lines.length; i ++) {
+		var row = lines[i].split(",");
+		var name = row[1];
+		var power = Number(row[2]);
+		var accuracy = Number(row[3]);
+		var type = row[5];
+		var isPhysical = row[6] == "物理";
+		waza_data[i +1] = {
+			id: i + 1,
+			name: name,
+			power: power,
+			accuracy: accuracy,
+			type: type,
+			isPhysical: isPhysical,
+		};
+	}
+}
+
 
 // トレーナー候補が一つも見つからなかったときのためのダミー用トレーナー
 function get_dummy_trainer_id(shuu) {
@@ -388,7 +422,8 @@ function effort_text_to_array(text) {
 	return efforts;
 }
 
-function gen_poke(rank, is_open_level, entry) {
+// damage.jsに渡すためのポケモンデータを作る
+function gen_poke(rank, is_open_level, entry, ability_index) {
 	var status = get_status(rank, is_open_level, entry);
 	var pokemon = entry.pokemon;
 	return {
@@ -400,6 +435,10 @@ function gen_poke(rank, is_open_level, entry) {
 		spAtk: status[3],
 		spDef: status[4],
 		speed: status[5],
+		item: entry.item,
+		ability: pokemon.abilities[ability_index],
+		type1: pokemon.type1,
+		type2: pokemon.type2
 	};
 }
 
