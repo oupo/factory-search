@@ -25,7 +25,7 @@ var RANK_8_LV50                  =  8, // ランク8 (Lv50 最初の6匹)
 	function set(i, j) {
 		// ランクjの最初から準伝説の最後までの範囲に設定
 		var start = rank_entries_start[j];
-		var count = 950 - start;
+		var count = 951 - start;
 		rank_entries_start[i] = start;
 		rank_entries_count[i] = count;
 	}
@@ -36,7 +36,7 @@ var RANK_8_LV50                  =  8, // ランク8 (Lv50 最初の6匹)
 	function set_start() {
 		// ランク1～7までのrank_entries_startを設定
 		rank_entries_start = [null];
-		var n = 0;
+		var n = 1;
 		for (var i = 1; i <= 7; i ++) {
 			rank_entries_start[i] = n;
 			n += rank_entries_count[i];
@@ -129,12 +129,12 @@ function initialize_pokemon_data(pokedex_csv_text) {
 function initialize_factory_entries(factory_data_text) {
 	var lines = factory_data_text.split("\n");
 	if (lines[lines.length - 1] === "") lines.pop();
-	factory_data = new Array(lines.length);
+	factory_data = new Array(1 + lines.length);
 	for (var i = 0; i < lines.length; i ++) {
 		var row = lines[i].split("|");
 		var pokemon = get_pokemon_entry(row[1]);
-		factory_data[i] = {
-			id: i,
+		factory_data[1 + i] = {
+			id: 1 + i,
 			name:   row[1],
 			pokemon: pokemon,
 			nature: natures.indexOf(row[2]),
@@ -147,7 +147,7 @@ function initialize_factory_entries(factory_data_text) {
 
 function set_pokemon_data_group() {
 	// ランク1のポケモン
-	for (var i = 0; i <= rank_entries_end[1]; i ++) {
+	for (var i = rank_entries_start[1]; i <= rank_entries_end[1]; i ++) {
 		var pokemon = factory_data[i].pokemon;
 		pokemon.group = 1;
 		pokemon.id_in_group = i;
