@@ -254,7 +254,6 @@ function trainer_id_to_name(i) {
 }
 
 function read_int_string(s, default_value) {
-	s = regularize_word(s);
 	if (/^\s*$/.test(s) && default_value !== undefined) {
 		return default_value;
 	}
