@@ -128,7 +128,7 @@ function initialize_factory_entries(factory_data_text) {
 			pokemon: pokemon,
 			nature: natures.indexOf(row[2]),
 			item:   row[3],
-			move:   row[4],
+			move:   row[4].split(","),
 			effort: omit_effort_text(row[5])
 		};
 	}
@@ -387,6 +387,21 @@ function effort_text_to_array(text) {
 		efforts[t.indexOf(text.charAt(i))] = text.length === 3 ? 170 : 255;
 	}
 	return efforts;
+}
+
+function gen_poke(rank, is_open_level, entry) {
+	var status = get_status(rank, is_open_level, entry);
+	var pokemon = entry.pokemon;
+	return {
+		name: pokemon.name,
+		level: is_open_level ? 100 : 50,
+		hp: status[0],
+		atk: status[1],
+		def: status[2],
+		spAtk: status[3],
+		spDef: status[4],
+		speed: status[5],
+	};
 }
 
 function get_status(rank, is_open_level, entry) {
