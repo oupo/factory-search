@@ -10,7 +10,8 @@ function calcComputedSpeed(poke) {
 	return poke.speed;
 }
 
-function calcDamage(userPoke, foePoke, waza) {
+function calcDamage(userPoke, foePoke, waza, options) {
+    if (!options) options = {};
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	var ch = 1; // 急所はなし
 	var r = 85; // 最小乱数
@@ -29,7 +30,7 @@ function calcDamage(userPoke, foePoke, waza) {
 	var mod3 = calcMod3(userPoke, foePoke, waza, (type1*type2) > 1);
 
 	var basePower = calcBasePower(userPoke, foePoke, waza);
-	var atk = calcAttack(userPoke, foePoke, waza);
+	var atk = calcAttack(userPoke, foePoke, waza, options);
 	var def = calcDefence(userPoke, foePoke, waza);
 	return calcDamage0(userPoke.level, basePower, atk, def, mod1, ch, mod2, r, stab, type1, type2, mod3);
 }
@@ -104,10 +105,14 @@ function calcBasePower(userPoke, foePoke, waza, effective) {
 	return basePower;
 }
 
-function calcAttack(userPoke, foePoke, waza) {
+function calcAttack(userPoke, foePoke, waza, options) {
 	var atk = waza.isPhysical ? userPoke.atk : userPoke.spAtk;
 
-	// ignore 能力変化
+    // 能力変化 (こうげきのみ)
+    var SM_multiplier = [2/8, 2/7, 2/6, 2/5, 2/4, 2/3, 2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2];
+    if (waza.isPhysical && options.atkMod != null) {
+        atk = int(atk * SM_multiplier[options.atkMod + 6]);
+    }
 
 	// ignore ヨガパワー ちからもち フラワーギフト こんじょう はりきり スロースタート プラス マイナス ソーラーパワー
 
