@@ -30,7 +30,7 @@ $(function () {
 	});
 });
 
-// TODO: いかく,こらえる
+// TODO: いかく
 ///      相手のダメージ技を考慮に入れる
 function completely_winnable(seed) {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
@@ -39,6 +39,7 @@ function completely_winnable(seed) {
 		["ゆうばく"],
 		[]
 	];
+	var ng_waza = ["こらえる"];
 	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
 	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
 	var suke = gen_poke(RANK_OPEN_8, true, factory_data[839], 0);
@@ -47,6 +48,9 @@ function completely_winnable(seed) {
 	//console.log(foes.map(function(x) { return x.name }));
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
+		return false;
+	}
+	if (foes.some(function(x) { return x.waza.some(function(w) { return ng_waza.indexOf(w) >= 0 }) })) {
 		return false;
 	}
 
