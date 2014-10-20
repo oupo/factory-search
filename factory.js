@@ -442,8 +442,17 @@ function gen_poke(rank, is_open_level, entry, ability_index) {
 		ability: pokemon.abilities[ability_index],
 		type1: pokemon.type1,
 		type2: pokemon.type2,
+		waza: entry.move,
 		entry: entry
 	};
+}
+
+function gen_enemy_pokes(rank, is_open_level, seed, my) {
+	var myEntries = my.map(function(x) { return x.entry });
+	var result = get_3_entries_info(fix_rank_enemy(rank, is_open_level), seed, 0, myEntries, null);
+	return result.infos.map(function (info) {
+		return gen_poke(rank, is_open_level, info.entry, info.pid % 2);
+	});
 }
 
 function get_status(rank, is_open_level, entry) {

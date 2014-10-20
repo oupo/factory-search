@@ -12,14 +12,14 @@ $(function () {
 		var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
 		var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"]
 		var ng_abilities2 = ["ゆうばく"];
-		// ムクホかラティ
+		// ムクホかラティの少なくとも一方で上から一撃で倒せる相手
 		var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
 		var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
 		var rai = gen_poke(RANK_OPEN_8, true, factory_data[788], 0);
 		var brave = waza_fromname[mukuho.entry.move[0]];
 		var ngs = [], num = 0;
 		for (var i = 623; i <= 950; i ++) {
-			var ret1 = check_1turn_ko(mukuho, i, null, ng_items, ng_abilities);
+			var ret1 = check_1turn_ko(mukuho, i, brave, ng_items, ng_abilities);
 			var ret2 = check_1turn_ko(rathi, i, null, ng_items, ng_abilities2);
 			if (ret1 == "skipped" || ret2 == "skipped") continue;
 			var ok = ret1 || ret2;
@@ -29,6 +29,87 @@ $(function () {
 		console.log(ngs.length+" / "+num);
 	});
 });
+
+// TODO: こだわり効果,反動ダメ,ng_abilities,いかく
+function completely_winnable(seed) {
+	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
+	var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"];
+	var ng_abilities2 = ["ゆうばく"];
+	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
+	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
+	var suke = gen_poke(RANK_OPEN_8, true, factory_data[839], 0);
+	var mys = [mukuho, rathi, suke];
+	var foes = gen_enemy_pokes(RANK_OPEN_8, true, seed, mys);
+	console.log(foes.map(function(x) { return x.name }));
+
+	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
+		return false;
+	}
+
+	return winnable([true,true,true], 0, foes.map(function(x) { return x.hp }), 0, []);
+
+	function winnable(living, curr, foeHps, foeCurr, history) {
+		//console.log([living.join(","), curr, foeHps.join(","), foeCurr]);
+		var my = mys[curr];
+		var foe = foes[foeCurr];
+		if (!living.some(function(x) { return x })) {
+			return false;
+		}
+		if (foeHps.every(function(x) { return x <= 0 })) {
+			return history;
+		}
+		// 現在HPが0→交換
+		if (!living[curr]) {
+			var change = [0,1,2].filter(function(x){return living[x]});
+			for (var i of change) {
+				var r = winnable(living, i, foeHps, foeCurr, history);
+				if (r) return r;
+			}
+			return false;
+		}
+		if (foeHps[foeCurr] <= 0) {
+			var rs = [0,1,2].filter(function(x){return foeHps[x] > 0}).map(function(i) {
+				return winnable(living, curr, foeHps, i, history);
+			});
+			if (rs.every(function(x) { return x })) {
+				return rs[0];
+			}
+			return false;
+		}
+		// たたかう場合
+		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
+			// 素早さ負ける→落ちて次のポケモンへ
+			var newLiving = living.slice(0);
+			newLiving[curr] = false;
+			var ret = winnable(newLiving, curr, foeHps, foeCurr, history);
+			if (ret) return ret;
+		} else {
+			// 一番ダメージの与えられる技を選択
+			var dmg = 0;
+			my.waza.forEach(function (waza) {
+				dmg = Math.max(dmg, calcDamage(my, foe, waza_fromname[waza]));
+			});
+			var newLiving = living.slice(0);
+			var newFoeHps = foeHps.slice(0);
+			newFoeHps[foeCurr] = Math.max(newFoeHps[foeCurr] - dmg, 0);
+			if (newFoeHps[foeCurr] > 0) {
+				newLiving[curr] = false;
+			}
+			var newHistory = history.concat(my.name+"で"+foe.name+"に"+dmg);
+			var ret = winnable(newLiving, curr, newFoeHps, foeCurr, newHistory);
+			if (ret) return ret;
+		}
+		// 交換→交換先は倒れる
+		var change = [0,1,2].filter(function(x){return living[x] && x != curr});
+		for (var i = 0; i < change.length; i ++) {
+			var newLiving = living.slice(0);
+			newLiving[change[i]] = false;
+			var ret = winnable(newLiving, change[i], foeHps, foeCurr, history);
+			if (ret) return ret;
+		}
+		return false;
+	}
+}
 
 function check_1turn_ko(my, entryid, fixedWaza, ng_items, ng_abilities) {
 	var target = gen_poke(RANK_OPEN_8, true, factory_data[entryid], 0);
