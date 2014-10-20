@@ -55,9 +55,38 @@ function completely_winnable(seed) {
 		return false;
 	}
 
-	return winnable(mys.map(function(x) { return x.hp }), 0, foes.map(function(x) { return x.hp }), 0, null, []);
 
-	function winnable(myHps, curr, foeHps, foeCurr, fixedWaza, history) {
+	var myHps = mys.map(function(x) { return x.hp });
+	var curr = 0;
+	var foeHps = foes.map(function(x) { return x.hp });
+	var foeCurr = 0;
+	var fixedWaza = null;
+	var history = [];
+
+	var stack = [];
+
+	return winnable();
+
+	function stackPush() {
+		stack.push({
+			myHps: myHps.slice(0),
+			curr: curr,
+			foeHps: foeHps.slice(0),
+			foeCurr: foeCurr,
+			fixedWaza: fixedWaza,
+			history: history.slice(0)
+		});
+	}
+	function stackPop() {
+		var popped = stack.pop();
+		myHps = popped.myHps;
+		curr = popped.curr;
+		foeHps = popped.foeHps;
+		foeCurr = popped.foeCurr;
+		fixedWaza = popped.fixedWaza;
+		history  = popped.history;
+	}
+	function winnable() {
 		//console.log([myHps.join(","), curr, foeHps.join(","), foeCurr, history.join(",")]);
 		var my = mys[curr];
 		var foe = foes[foeCurr];
@@ -71,7 +100,10 @@ function completely_winnable(seed) {
 		if (myHps[curr] <= 0) {
 			var change = [0,1,2].filter(function(x){return myHps[x] > 0});
 			for (var i of change) {
-				var r = winnable(myHps, i, foeHps, foeCurr, null, history);
+				stackPush();
+				curr = i, fixedWaza = null;
+				var r = winnable();
+				stackPop();
 				if (r) return r;
 			}
 			return false;
@@ -80,7 +112,10 @@ function completely_winnable(seed) {
 			var change = [0,1,2].filter(function(x){return foeHps[x] > 0});
 			var r;
 			for (var i of change) {
-				r = winnable(myHps, curr, foeHps, i, fixedWaza, history);
+				stackPush();
+				foeCurr = i;
+				var r = winnable();
+				stackPop();
 				if (!r) return false;
 			}
 			return r;
@@ -88,27 +123,31 @@ function completely_winnable(seed) {
 		// たたかう場合
 		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
 			// 素早さ負ける→落ちて次のポケモンへ
-			var newMyHps = myHps.slice(0);
-			newMyHps[curr] = 0;
-			var ret = winnable(newMyHps, curr, foeHps, foeCurr, fixedWaza, history);
+			stackPush();
+			myHps[curr] = 0;
+			var ret = winnable();
+			stackPop();
 			if (ret) return ret;
 		} else {
-			var ret = action(myHps, curr, foeHps, foeCurr, fixedWaza, history);
+			var ret = action();
 			if (ret) return ret;
 		}
 		// 交換する場合→交換先は倒れる
 		var change = [0,1,2].filter(function(x){return myHps[x] > 0 && x != curr});
 		for (var i = 0; i < change.length; i ++) {
-			var newMyHps = myHps.slice(0);
-			newMyHps[change[i]] = 0;
-			var newHistory = history.concat(mys[change[i]].name+"に交代");
-			var ret = winnable(newMyHps, change[i], foeHps, foeCurr, null, newHistory);
+			stackPush();
+			myHps[change[i]] = 0;
+			curr = change[i];
+			fixedWaza = null;
+			history.push(mys[change[i]].name+"に交代");
+			var ret = winnable();
+			stackPop();
 			if (ret) return ret;
 		}
 		return false;
 	}
 
-	function action(myHps, curr, foeHps, foeCurr, fixedWaza, history) {
+	function action() {
 		var my = mys[curr];
 		var foe = foes[foeCurr];
 		var dmg = 0;
@@ -128,25 +167,26 @@ function completely_winnable(seed) {
 					}
 				}
 			});
-			if (my == mukuho) {
-				fixedWaza = waza; // こだわる
-			}
 		}
-		var newMyHps = myHps.slice(0);
-		if (waza.name == "ブレイブバード") {
-			newMyHps[curr] -= int(dmg/3);
-		}
-		var newFoeHps = foeHps.slice(0);
-		newFoeHps[foeCurr] = Math.max(newFoeHps[foeCurr] - dmg, 0);
-		if (newFoeHps[foeCurr] > 0) {
-			newMyHps[curr] = 0;
-		}
+		var newHp = Math.max(foeHps[foeCurr] - dmg, 0);
 		// 倒したときにダメな特性だったら失敗とする
-		if (newFoeHps[foeCurr] <= 0 && ng_abilities[curr].indexOf(foe.ability) >= 0) {
+		if (newHp <= 0 && ng_abilities[curr].indexOf(foe.ability) >= 0) {
 			return false;
 		}
-		var newHistory = history.concat(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
-		var ret = winnable(newMyHps, curr, newFoeHps, foeCurr, fixedWaza, newHistory);
+		stackPush();
+		if (waza.name == "ブレイブバード") {
+			myHps[curr] -= int(dmg/3);
+		}
+		if (my == mukuho) {
+			fixedWaza = waza;
+		}
+		foeHps[foeCurr] = newHp;
+		if (foeHps[foeCurr] > 0) {
+			myHps[curr] = 0;
+		}
+		history.push(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
+		var ret = winnable();
+		stackPop();
 		return ret;
 	}
 }
