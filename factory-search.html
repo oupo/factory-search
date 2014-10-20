@@ -30,7 +30,7 @@ $(function () {
 	});
 });
 
-// TODO: 反動ダメ,ng_abilities,いかく,こらえる,こだわる技の選択
+// TODO: ng_abilities,いかく,こらえる,こだわる技の選択
 function completely_winnable(seed) {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
 	var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"];
@@ -40,29 +40,29 @@ function completely_winnable(seed) {
 	var suke = gen_poke(RANK_OPEN_8, true, factory_data[839], 0);
 	var mys = [mukuho, rathi, suke];
 	var foes = gen_enemy_pokes(RANK_OPEN_8, true, seed, mys);
-	console.log(foes.map(function(x) { return x.name }));
+	//console.log(foes.map(function(x) { return x.name }));
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
 		return false;
 	}
 
-	return winnable([true,true,true], 0, foes.map(function(x) { return x.hp }), 0, null, []);
+	return winnable(mys.map(function(x) { return x.hp }), 0, foes.map(function(x) { return x.hp }), 0, null, []);
 
-	function winnable(living, curr, foeHps, foeCurr, fixedWaza, history) {
-		//console.log([living.join(","), curr, foeHps.join(","), foeCurr]);
+	function winnable(myHps, curr, foeHps, foeCurr, fixedWaza, history) {
+		//console.log([myHps.join(","), curr, foeHps.join(","), foeCurr, history.join(",")]);
 		var my = mys[curr];
 		var foe = foes[foeCurr];
-		if (!living.some(function(x) { return x })) {
+		if (myHps.every(function(x) { return x <= 0 })) {
 			return false;
 		}
 		if (foeHps.every(function(x) { return x <= 0 })) {
 			return history;
 		}
 		// 現在HPが0→交換
-		if (!living[curr]) {
-			var change = [0,1,2].filter(function(x){return living[x]});
+		if (myHps[curr] <= 0) {
+			var change = [0,1,2].filter(function(x){return myHps[x] > 0});
 			for (var i of change) {
-				var r = winnable(living, i, foeHps, foeCurr, null, history);
+				var r = winnable(myHps, i, foeHps, foeCurr, null, history);
 				if (r) return r;
 			}
 			return false;
@@ -71,7 +71,7 @@ function completely_winnable(seed) {
 			var change = [0,1,2].filter(function(x){return foeHps[x] > 0});
 			var r;
 			for (var i of change) {
-				r = winnable(living, curr, foeHps, i, fixedWaza, history);
+				r = winnable(myHps, curr, foeHps, i, fixedWaza, history);
 				if (!r) return false;
 			}
 			return r;
@@ -79,9 +79,9 @@ function completely_winnable(seed) {
 		// たたかう場合
 		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
 			// 素早さ負ける→落ちて次のポケモンへ
-			var newLiving = living.slice(0);
-			newLiving[curr] = false;
-			var ret = winnable(newLiving, curr, foeHps, foeCurr, fixedWaza, history);
+			var newMyHps = myHps.slice(0);
+			newMyHps[curr] = 0;
+			var ret = winnable(newMyHps, curr, foeHps, foeCurr, fixedWaza, history);
 			if (ret) return ret;
 		} else {
 			var dmg = 0;
@@ -94,7 +94,7 @@ function completely_winnable(seed) {
 				my.waza.forEach(function (wn) {
 					var w = waza_fromname[wn];
 					if (w.basePower > 1 && w.accuracy == 100) {
-						var d = calcDamage(my, foe, w);
+						var d = Math.min(calcDamage(my, foe, w), foeHps[foeCurr]);
 						if (dmg < d) {
 							dmg = d;
 							waza = w;
@@ -105,23 +105,26 @@ function completely_winnable(seed) {
 					fixedWaza = waza; // こだわる
 				}
 			}
-			var newLiving = living.slice(0);
+			var newMyHps = myHps.slice(0);
+			if (waza.name == "ブレイブバード") {
+				newMyHps[curr] -= int(dmg/3);
+			}
 			var newFoeHps = foeHps.slice(0);
 			newFoeHps[foeCurr] = Math.max(newFoeHps[foeCurr] - dmg, 0);
 			if (newFoeHps[foeCurr] > 0) {
-				newLiving[curr] = false;
+				newMyHps[curr] = 0;
 			}
 			var newHistory = history.concat(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
-			var ret = winnable(newLiving, curr, newFoeHps, foeCurr, fixedWaza, newHistory);
+			var ret = winnable(newMyHps, curr, newFoeHps, foeCurr, fixedWaza, newHistory);
 			if (ret) return ret;
 		}
 		// 交換→交換先は倒れる
-		var change = [0,1,2].filter(function(x){return living[x] && x != curr});
+		var change = [0,1,2].filter(function(x){return myHps[x] > 0 && x != curr});
 		for (var i = 0; i < change.length; i ++) {
-			var newLiving = living.slice(0);
-			newLiving[change[i]] = false;
+			var newMyHps = myHps.slice(0);
+			newMyHps[change[i]] = 0;
 			var newHistory = history.concat(mys[change[i]].name+"に交代");
-			var ret = winnable(newLiving, change[i], foeHps, foeCurr, null, newHistory);
+			var ret = winnable(newMyHps, change[i], foeHps, foeCurr, null, newHistory);
 			if (ret) return ret;
 		}
 		return false;
