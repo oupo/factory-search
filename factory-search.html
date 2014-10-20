@@ -169,8 +169,8 @@ function completely_winnable(seed) {
 			});
 		}
 		var newHp = Math.max(foeHps[foeCurr] - dmg, 0);
-		// 倒したときにダメな特性だったら失敗とする
-		if (newHp <= 0 && ng_abilities[curr].indexOf(foe.ability) >= 0) {
+		// 攻撃したときダメな特性だったら失敗とする
+		if (ng_abilities[curr].indexOf(foe.ability) >= 0) {
 			return false;
 		}
 		stackPush();
