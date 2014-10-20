@@ -61,6 +61,7 @@ function completely_winnable(seed) {
 	var foeHps = foes.map(function(x) { return x.hp });
 	var foeCurr = 0;
 	var fixedWaza = null;
+	var justAfterFoeExchanged = true;
 	var history = [];
 
 	var stack = [];
@@ -74,8 +75,10 @@ function completely_winnable(seed) {
 			foeHps: foeHps.slice(0),
 			foeCurr: foeCurr,
 			fixedWaza: fixedWaza,
+			justAfterFoeExchanged: justAfterFoeExchanged,
 			history: history.slice(0)
 		});
+		justAfterFoeExchanged = false;
 	}
 	function stackPop() {
 		var popped = stack.pop();
@@ -84,6 +87,7 @@ function completely_winnable(seed) {
 		foeHps = popped.foeHps;
 		foeCurr = popped.foeCurr;
 		fixedWaza = popped.fixedWaza;
+		justAfterFoeExchanged = popped.justAfterFoeExchanged;
 		history  = popped.history;
 	}
 	function winnable() {
@@ -114,11 +118,14 @@ function completely_winnable(seed) {
 			for (var i of change) {
 				stackPush();
 				foeCurr = i;
+				justAfterFoeExchanged = true;
 				var r = winnable();
 				stackPop();
 				if (!r) return false;
 			}
 			return r;
+		}
+		if (justAfterFoeExchanged) {
 		}
 		// たたかう場合
 		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
