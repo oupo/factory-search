@@ -30,11 +30,15 @@ $(function () {
 	});
 });
 
-// TODO: ng_abilities,いかく,こらえる,こだわる技の選択
+// TODO: いかく,こらえる
+///      相手のダメージ技を考慮に入れる
 function completely_winnable(seed) {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
-	var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"];
-	var ng_abilities2 = ["ゆうばく"];
+	var ng_abilities = [
+		["ゆうばく", "ほのおのからだ", "ほうし"],
+		["ゆうばく"],
+		[]
+	];
 	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
 	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
 	var suke = gen_poke(RANK_OPEN_8, true, factory_data[839], 0);
@@ -84,41 +88,10 @@ function completely_winnable(seed) {
 			var ret = winnable(newMyHps, curr, foeHps, foeCurr, fixedWaza, history);
 			if (ret) return ret;
 		} else {
-			var dmg = 0;
-			var waza;
-			if (fixedWaza) {
-				waza = fixedWaza;
-				dmg = calcDamage(my, foe, waza);
-			} else {
-				// 一番ダメージの与えられる技を選択
-				my.waza.forEach(function (wn) {
-					var w = waza_fromname[wn];
-					if (w.basePower > 1 && w.accuracy == 100) {
-						var d = Math.min(calcDamage(my, foe, w), foeHps[foeCurr]);
-						if (dmg < d) {
-							dmg = d;
-							waza = w;
-						}
-					}
-				});
-				if (my == mukuho) {
-					fixedWaza = waza; // こだわる
-				}
-			}
-			var newMyHps = myHps.slice(0);
-			if (waza.name == "ブレイブバード") {
-				newMyHps[curr] -= int(dmg/3);
-			}
-			var newFoeHps = foeHps.slice(0);
-			newFoeHps[foeCurr] = Math.max(newFoeHps[foeCurr] - dmg, 0);
-			if (newFoeHps[foeCurr] > 0) {
-				newMyHps[curr] = 0;
-			}
-			var newHistory = history.concat(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
-			var ret = winnable(newMyHps, curr, newFoeHps, foeCurr, fixedWaza, newHistory);
+			var ret = action(myHps, curr, foeHps, foeCurr, fixedWaza, history);
 			if (ret) return ret;
 		}
-		// 交換→交換先は倒れる
+		// 交換する場合→交換先は倒れる
 		var change = [0,1,2].filter(function(x){return myHps[x] > 0 && x != curr});
 		for (var i = 0; i < change.length; i ++) {
 			var newMyHps = myHps.slice(0);
@@ -128,6 +101,48 @@ function completely_winnable(seed) {
 			if (ret) return ret;
 		}
 		return false;
+	}
+
+	function action(myHps, curr, foeHps, foeCurr, fixedWaza, history) {
+		var my = mys[curr];
+		var foe = foes[foeCurr];
+		var dmg = 0;
+		var waza;
+		if (fixedWaza) {
+			waza = fixedWaza;
+			dmg = calcDamage(my, foe, waza);
+		} else {
+			// 一番ダメージの与えられる技を選択
+			my.waza.forEach(function (wn) {
+				var w = waza_fromname[wn];
+				if (w.basePower > 1 && w.accuracy == 100) {
+					var d = Math.min(calcDamage(my, foe, w), foeHps[foeCurr]);
+					if (dmg < d) {
+						dmg = d;
+						waza = w;
+					}
+				}
+			});
+			if (my == mukuho) {
+				fixedWaza = waza; // こだわる
+			}
+		}
+		var newMyHps = myHps.slice(0);
+		if (waza.name == "ブレイブバード") {
+			newMyHps[curr] -= int(dmg/3);
+		}
+		var newFoeHps = foeHps.slice(0);
+		newFoeHps[foeCurr] = Math.max(newFoeHps[foeCurr] - dmg, 0);
+		if (newFoeHps[foeCurr] > 0) {
+			newMyHps[curr] = 0;
+		}
+		// 倒したときにダメな特性だったら失敗とする
+		if (newFoeHps[foeCurr] <= 0 && ng_abilities[curr].indexOf(foe.ability) >= 0) {
+			return false;
+		}
+		var newHistory = history.concat(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
+		var ret = winnable(newMyHps, curr, newFoeHps, foeCurr, fixedWaza, newHistory);
+		return ret;
 	}
 }
 
