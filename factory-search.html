@@ -11,6 +11,18 @@
 <script>
 $(function () {
 	initialize_factory(function () {
+		var lcg = new LCG(0);
+		var shuu = 5;
+		var is_open_level = true;
+		var entries = rand_starter_entries(lcg, is_open_level, shuu, 0);
+		var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
+		var playerPokes = starters.slice(0, 3);
+		console.log(starters.map(function(x){return x.name}));
+		lcg.step(2); // shuffle
+		var enemyRank = Rank.objectsOpenTrainer[5];
+		rand_enemy_loop(lcg, shuu, enemyRank, starters, playerPokes, function (i, enemy) {
+			console.log(enemy.map(function(x){return x.name}));
+		});
 	});
 });
 

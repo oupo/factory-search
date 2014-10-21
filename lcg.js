@@ -38,7 +38,7 @@ for (var i = 0; i < 256; i ++) {
 }
 })();
 
-function seed_step(n) {
+function seed_step(seed, n) {
 	var c;
 	if (0 <= n && n < 256) {
 		c = seed_step.cache[n];
@@ -63,3 +63,7 @@ LCG.prototype.rand = function () {
 	this.seed = seed_next(this.seed);
 	return this.seed >>> 16;
 };
+
+LCG.prototype.step = function (n) {
+	this.seed = seed_step(this.seed, n);
+}

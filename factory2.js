@@ -144,6 +144,40 @@ function starter_entiries_to_poke(is_open_level, shuu, num_bonus, entries, pids)
 	return pokes;
 }
 
+function rand_enemy_poke(lcg, rank, seen) {
+	var entries = rand_entries(lcg, rank, 3, seen);
+	var pids = rand_pid(lcg, entries);
+	return entries.map(function (entry, i) {
+		return gen_poke(rank, entry, pids[i] % 2);
+	});
+}
+
+function rand_gap(lcg, shuu, nth, enemy_rank) {
+	var c;
+	if (shuu >= 5) {
+		c = 24;
+	} else if(enemy_rank.rank == 1) {
+		c = 6;
+	} else {
+		c = 12;
+	}
+	if (nth == 1) {
+		c += shuu == 1 ? 18 : 36;
+	}
+	lcg.step(c);
+}
+
+function rand_enemy_loop(lcg, shuu, rank, starters, playerPokes, fn) {
+	var prev;
+	for (var i = 1; i <= 7; i ++) {
+		var seen = i == 1 ? starters : playerPokes.concat(prev);
+		var pokes = rand_enemy_poke(lcg, rank, seen.map(function(x){return x.entry}));
+		fn(i, pokes);
+		prev = pokes;
+		rand_gap(lcg, shuu, i, rank);
+	}
+}
+
 // damage.jsに渡すためのポケモンデータを作る
 function gen_poke(rank, entry, ability_index) {
 	var status = get_status(rank, entry);
