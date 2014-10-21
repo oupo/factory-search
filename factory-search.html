@@ -30,8 +30,7 @@ $(function () {
 	});
 });
 
-// TODO: - 捨てポケを出している間に回復されたり積まれたりするかもしれない
-//       - 相手のダメージ技を考慮に入れる
+// TODO: - 相手のダメージ技を考慮に入れる
 function completely_winnable(seed) {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
 	var ng_abilities = [
@@ -40,6 +39,7 @@ function completely_winnable(seed) {
 		[]
 	];
 	var ng_waza = ["こらえる"];
+	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
 	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
 	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
 	var suke = gen_poke(RANK_OPEN_8, true, factory_data[839], 0);
@@ -143,6 +143,11 @@ function completely_winnable(seed) {
 			if (ret) return ret;
 		}
 		// 交換する場合→交換先は倒れる
+
+		// 相手が積み技などを持っていた場合
+		if (foe.waza.some(function(x) { return ng_waza2.indexOf(x) >= 0 })) {
+			return false;
+		}
 		var change = [0,1,2].filter(function(x){return myHps[x] > 0 && x != curr});
 		for (var i = 0; i < change.length; i ++) {
 			stackPush();
@@ -183,6 +188,10 @@ function completely_winnable(seed) {
 		if (ng_abilities[curr].indexOf(foe.ability) >= 0) {
 			return false;
 		}
+		// 相手のHPが残っていて積み技などを持っていた場合失敗
+		if (newHp > 0 && foe.waza.some(function(x) { return ng_waza2.indexOf(x) >= 0 })) {
+			return false;
+		}
 		stackPush();
 		if (waza.name == "ブレイブバード") {
 			myHps[curr] -= int(dmg/3);
@@ -191,7 +200,7 @@ function completely_winnable(seed) {
 			fixedWaza = waza;
 		}
 		foeHps[foeCurr] = newHp;
-		if (foeHps[foeCurr] > 0) {
+		if (newHp > 0) { // 相手のHPが残っている
 			myHps[curr] = 0;
 		}
 		history.push(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
