@@ -167,10 +167,11 @@ function rand_gap(lcg, shuu, nth, enemy_rank) {
 	lcg.step(c);
 }
 
-function rand_enemy_loop(lcg, shuu, rank, starters, playerPokes, fn) {
+function rand_enemy_loop(lcg, is_open_level, shuu, is_hgss, trainers, starters, playerPokes, fn) {
 	var prev;
 	for (var i = 1; i <= 7; i ++) {
 		var seen = i == 1 ? starters : playerPokes.concat(prev);
+		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
 		var pokes = rand_enemy_poke(lcg, rank, seen.map(function(x){return x.entry}));
 		fn(i, pokes);
 		prev = pokes;
@@ -200,3 +201,44 @@ function gen_poke(rank, entry, ability_index) {
 	};
 }
 
+function rand_trainer_id(lcg, shuu, is_last) {
+	var r = lcg.rand();
+	if (shuu >= 8) {
+		return r % 99 + 200;
+	} else if (is_last) {
+		return r % 19 + 100 + (shuu - 1) * 20;
+	} else if (shuu === 1) {
+		return r % 99;
+	} else {
+		return r % 39 + 80 + (shuu - 2) * 20;
+	}
+}
+
+function rand_trainers(lcg, shuu, is_hgss) {
+	// トレーナーA
+	var trainers = rand_trainers0(lcg, shuu, 7, [], true);
+	// トレーナーB
+	//   2周目と6周目は6人分しか決定しない
+	//   プラチナでは7人目も6人目までと同じ決定方法
+	rand_trainers0(lcg, shuu,
+	               (shuu === 2 || shuu === 6) ? 6 : 7, trainers,
+	               is_hgss);
+	return trainers;
+}
+
+
+function rand_trainers0(lcg, shuu, num, seen, is_last_trainer_next_rank) {
+	var trainers = [];
+	var i = 1;
+	while (i <= num) {
+		if ((shuu === 3 || shuu === 7) && i === 7 && seen.length === 0) {
+			trainers.push(shuu === 3 ? silver_nejiki_id : gold_nejiki_id);
+			break;
+		}
+		var e = rand_trainer_id(lcg, shuu, is_last_trainer_next_rank && i === 7);
+		if (trainers.indexOf(e) >= 0 ||seen.indexOf(e) >= 0) continue;
+		trainers.push(e);
+		i ++;
+	}
+	return trainers;
+}
