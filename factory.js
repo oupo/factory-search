@@ -320,7 +320,7 @@ function gen_poke(rank, is_open_level, entry, ability_index) {
 
 function gen_enemy_pokes(rank, is_open_level, seed, my) {
 	var myEntries = my.map(function(x) { return x.entry });
-	var result = get_3_entries_info(fix_rank_enemy(rank, is_open_level), seed, 0, myEntries, null);
+	var result = get_3_entries_info(fix_rank_enemy(rank, is_open_level), seed, myEntries, null);
 	return result.infos.map(function (info) {
 		return gen_poke(rank, is_open_level, info.entry, info.pid % 2);
 	});
@@ -454,27 +454,26 @@ function seed_to_entry_id(rank, seed) {
 	return end - (seed >>> 16) % count;
 }
 
-function get_3_entries_info(rank, seed, consumption, visited_entries, entries_in_hand) {
-	return get_entries_info(rank, null, seed, consumption, 3, visited_entries, entries_in_hand, 0);
+function get_3_entries_info(rank, seed, visited_entries, entries_in_hand) {
+	return get_entries_info(rank, null, seed, 3, visited_entries, entries_in_hand, 0);
 }
 
-function get_6_entries_info(shuu, is_open_level, seed, consumption, num_bonus) {
+function get_6_entries_info(shuu, is_open_level, seed, num_bonus) {
 	var rank = fix_rank(shuu, is_open_level);
 	var bonus_rank = fix_rank(shuu + 1, is_open_level);
-	return get_entries_info(rank, bonus_rank, seed, consumption, 6, [], null, num_bonus);
+	return get_entries_info(rank, bonus_rank, seed, 6, [], null, num_bonus);
 }
 
-function get_entries_info(rank, bonus_rank, seed, consumption, num, visited_entries, entries_in_hand, num_bonus) {
+function get_entries_info(rank, bonus_rank, seed, num, visited_entries, entries_in_hand, num_bonus) {
 	var entries = [];
 	var infos = [];
 	var i = 0;
 	var seed_start = seed;
-	var c = consumption;
 	while (i < num) {
 		var is_bonus = num - i <= num_bonus;
 		var entry_rank = is_bonus ? bonus_rank : rank;
 		var entry = seed_to_entry(entry_rank, seed);
-		seed = next_seed(seed); c ++;
+		seed = next_seed(seed);
 		if (entries_collision(entry, entries, visited_entries)) continue;
 		entries.push(entry);
 		infos.push({entry: entries[i],
@@ -487,15 +486,15 @@ function get_entries_info(rank, bonus_rank, seed, consumption, num, visited_entr
 	
 	for (var i = 0; i < num; i ++) {
 		var parent_id = seed >>> 16;
-		seed = next_seed(seed); c ++;
+		seed = next_seed(seed);
 		var secret_id = seed >>> 16;
-		seed = next_seed(seed); c ++;
+		seed = next_seed(seed);
 		var nature = entries[i].nature;
 		do {
 			var pid_low = seed >>> 16;
-			seed = next_seed(seed); c ++;
+			seed = next_seed(seed);
 			var pid_high = seed >>> 16;
-			seed = next_seed(seed); c ++;
+			seed = next_seed(seed);
 			var pid = (pid_high << 16 | pid_low) >>> 0;
 		} while (pid % 25 !== nature || is_shiny_pid(parent_id, secret_id, pid));
 		infos[i].parent_id = parent_id;
@@ -503,15 +502,13 @@ function get_entries_info(rank, bonus_rank, seed, consumption, num, visited_entr
 		infos[i].pid = pid;
 	}
 	
-	var range = {first: consumption, last: c - 1};
-	
 	var raw_entries = entries;
 	if (num === 6) {
 		entries = entries.slice();
 		var swap1 = (seed >>> 16) % 6;
-		seed = next_seed(seed); c ++;
+		seed = next_seed(seed);
 		var swap2 = (seed >>> 16) % 6;
-		seed = next_seed(seed); c ++;
+		seed = next_seed(seed);
 		
 		ary_swap(infos, 4, swap1);
 		ary_swap(infos, 5, swap2);
@@ -525,8 +522,6 @@ function get_entries_info(rank, bonus_rank, seed, consumption, num, visited_entr
 	        infos: infos,
 	        seed: seed,
 	        seed_start: seed_start,
-	        rand_range: range,
-	        next_consumption: c,
 	        entries_in_hand: entries_in_hand,
 	        visited_entries: visited_entries,
 	        rank: rank,
