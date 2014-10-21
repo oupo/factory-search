@@ -90,7 +90,6 @@ function initialize_factory(callback) {
 		if (!factory_data_text || !pokedex_csv_text || !trainer_names_text || !waza_csv_text) return;
 		initialize_pokemon_data(pokedex_csv_text);
 		initialize_factory_entries(factory_data_text);
-		set_pokemon_data_group();
 		initialize_trainer_names(trainer_names_text);
 		initialize_waza(waza_csv_text);
 		callback();
@@ -120,8 +119,6 @@ function initialize_pokemon_data(pokedex_csv_text) {
 			gender_boundary: gender_boundary,
 			type1: type[0],
 			type2: type[1] || type[0],
-			group: null,
-			id_in_group: null
 		};
 	}
 }
@@ -145,38 +142,8 @@ function initialize_factory_entries(factory_data_text) {
 	}
 }
 
-function set_pokemon_data_group() {
-	// ランク1のポケモン
-	for (var i = rank_entries_start[1]; i <= rank_entries_end[1]; i ++) {
-		var pokemon = factory_data[i].pokemon;
-		pokemon.group = 1;
-		pokemon.id_in_group = i;
-	}
-	// ランク2,3のポケモン
-	for (var i = rank_entries_start[2]; i <= rank_entries_end[2]; i ++) {
-		var pokemon = factory_data[i].pokemon;
-		pokemon.group = 2;
-		pokemon.id_in_group = i - rank_entries_start[2];
-	}
-	// ランク4～7のポケモン
-	for (var i = rank_entries_start[4]; i <= rank_entries_end[4]; i ++) {
-		var pokemon = factory_data[i].pokemon;
-		pokemon.group = 3;
-		pokemon.id_in_group = i - rank_entries_start[4];
-	}
-	// 準伝説
-	var start = rank_entries_end[7] + 1;
-	var end = start + 14;
-	for (var i = start; i < end; i ++) {
-		var pokemon = factory_data[i].pokemon;
-		pokemon.group = 4;
-		pokemon.id_in_group = i - start;
-	}
-}
-
 var silver_nejiki_id;
 var gold_nejiki_id;
-var dummy_trainer_start_id;
 
 function initialize_trainer_names(trainer_names_text) {
 	var lines = trainer_names = trainer_names_text.split("\n");
@@ -186,10 +153,6 @@ function initialize_trainer_names(trainer_names_text) {
 	lines.push("ファクトリーヘッドのネジキ");
 	gold_nejiki_id = lines.length;
 	lines.push("ファクトリーヘッドのネジキ");
-	dummy_trainer_start_id = lines.length;
-	for (var i = 0; i < 8; i ++) {
-		lines.push("");
-	}
 }
 
 function initialize_waza(waza_csv_text) {
@@ -218,18 +181,6 @@ function initialize_waza(waza_csv_text) {
 }
 
 
-// トレーナー候補が一つも見つからなかったときのためのダミー用トレーナー
-function get_dummy_trainer_id(shuu) {
-	return dummy_trainer_start_id + (Math.min(shuu, 8) - 1);
-}
-
-function get_checked_radio_index(radios) {
-	for (var i = 0; i < radios.length; i ++) {
-		if (radios[i].checked) return i;
-	}
-	return null;
-}
-
 function get_trainers_candidate(seed_head, shuu, back_seeds, is_hgss) {
 	var i = 13;
 	var seed = step_seed(seed_head, -i);
@@ -243,31 +194,12 @@ function get_trainers_candidate(seed_head, shuu, back_seeds, is_hgss) {
 			             seed: seed,
 			             c: r.c,
 			             trainer_ids: r.trainer_ids,
-			             trainer_ids2: r.trainer_ids2,
-			             is_dummy: false});
+			             trainer_ids2: r.trainer_ids2});
 		}
 		i ++;
 		seed = prev_seed(seed);
 	}
-	if (result.length === 0) {
-		result.push(gen_dummy_trainers(shuu));
-	}
 	return result;
-}
-
-function gen_dummy_trainers(shuu) {
-	var ids = [];
-	for (var i = 0; i < 6; i ++) {
-		ids.push(get_dummy_trainer_id(shuu));
-	}
-	if (shuu === 3) {
-		ids.push(silver_nejiki_id);
-	} else if (shuu === 7) {
-		ids.push(gold_nejiki_id);
-	} else {
-		ids.push(get_dummy_trainer_id(shuu + 1));
-	}
-	return {start: null, c: null, trainer_ids: ids, is_dummy: true};
 }
 
 // 相手の3匹決定後の乱数消費量を取得
@@ -300,72 +232,11 @@ function read_int_string(s, default_value) {
 	return Number(s);
 }
 
-var LEGEND_START_ID = rank_entries_end[7] + 1;
-var LEGEND_NUM = 14; // 準伝説1セットの数 (ランク7のポケモンの後ろに4セットある)
-
-function pokemon_to_entry(rank, pokemon, no) {
-	var group = pokemon.group;
-	var id_in_group = pokemon.id_in_group;
-	if (group === null) return null;
-	if (!match_rank_and_group(rank, group)) return null;
-	if (rank >= 8) {
-		if (!(1 <= no && no <= 4)) return null;
-		if (group === 4) { // 準伝説
-			return factory_data[LEGEND_START_ID + (no - 1) * LEGEND_NUM + id_in_group];
-		} else {
-			return factory_data[rank_entries_start[3 + no] + id_in_group];
-		}
-	} else { // ランク7以下は引数noは無視
-		return factory_data[rank_entries_start[rank] + id_in_group];
-	}
-}
-
-function entry_to_no(entry) {
-	if (entry.pokemon.group === 4) { // 準伝説
-		var i = entry.id - LEGEND_START_ID;
-		return Math.floor(i / LEGEND_NUM) + 1;
-	} else if (entry.pokemon.group === 3) {
-		return entry_id_to_rank(entry.id) - 3;
-	} else {
-		UNREACHABLE();
-	}
-}
-
-function get_legend_entry(pokemon, no) {
-	var id_in_group = pokemon.id_in_group;
-	return factory_data[LEGEND_START_ID + no * LEGEND_NUM + id_in_group];
-}
-
-function match_rank_and_group(rank, group) {
-	if (group === 1) return rank === 1;
-	if (group === 2) return rank === 2 || rank === 3;
-	if (group === 3) return rank >= 4;
-	if (group === 4) return rank >= 8;
-	UNREACHABLE();
-}
-
-// ポケモンが指定した周の最初の6匹に存在しえるか (ボーナスポケモンも含めて)
-function exist_pokemon_in_rank(shuu, pokemon) {
-	var group = pokemon.group;
-	if (group === null) return false;
-	return match_rank_and_group(shuu, group) || match_rank_and_group(shuu + 1, group);
-}
-
 function entry_id_to_rank(id) {
 	for (var i = 1; i <= 7; i ++) {
 		if (id <= rank_entries_end[i]) return i;
 	}
 	return 8;
-}
-
-function get_selected_button_index(parent) {
-	var buttons = $("button", parent);
-	for (var i = 0; i < buttons.length; i ++) {
-		if (hasClass(buttons[i], "selected")) {
-			return i;
-		}
-	}
-	return -1;
 }
 
 function get_individual_by_rank(rank) {
@@ -728,25 +599,6 @@ function unfix_rank(rank, is_open_level) {
 	}
 }
 
-function elementWithIn(elem1, elem2) {
-	// elem2 が elem1 と同一の要素か、elem1 の子孫要素のとき true を返す
-	var elem = elem2;
-	while (elem) {
-		if (elem === elem1) return true;
-		 elem = elem.parentNode;
-	}
-	return false;
-}
-
-function get_parent_element(e, tagName) {
-	tagName = tagName.toUpperCase();
-	while (e && e.nodeType === 1) {
-		if (e.tagName.toUpperCase() === tagName) return e;
-		e = e.parentNode;
-	}
-	return null;
-}
-
 function ary_eq(a, b) {
 	if (a === b) return true;
 	if (a.length !== b.length) return false;
@@ -779,12 +631,6 @@ function str_repeat(s, n) {
 		r += s;
 	}
 	return r;
-}
-
-function rjust_name(name) {
-	var width = name.length * 2;
-	if (/[2Z]$/.test(name)) width -= 1; // ポリゴン[2Z]
-	return str_repeat(" ", 10 - width) + name;
 }
 
 function UNREACHABLE() {
