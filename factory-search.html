@@ -9,26 +9,36 @@
 <script>
 $(function () {
 	initialize_factory(function () {
-		var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
-		var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"]
-		var ng_abilities2 = ["ゆうばく"];
-		// ムクホかラティの少なくとも一方で上から一撃で倒せる相手
-		var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
-		var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
-		var rai = gen_poke(RANK_OPEN_8, true, factory_data[788], 0);
-		var brave = waza_fromname[mukuho.entry.move[0]];
-		var ngs = [], num = 0;
-		for (var i = 623; i <= 950; i ++) {
-			var ret1 = check_1turn_ko(mukuho, i, brave, ng_items, ng_abilities);
-			var ret2 = check_1turn_ko(rathi, i, null, ng_items, ng_abilities2);
-			if (ret1 == "skipped" || ret2 == "skipped") continue;
-			var ok = ret1 || ret2;
-			if (!ok) ngs.push(i);
-			num ++;
-		}
-		console.log(ngs.length+" / "+num);
+		var info = get_6_entries_info(5, true, 0, 0);
+		console.log(info.entries.map(function(x) {return x.name}));
+		var info2 = get_3_entries_info(fix_rank_enemy(5, true), info.seed, info.entries);
+		console.log(info2.entries.map(function(x) {return x.name}));
+		var seed = step_seed(info2.seed, get_enemy_consuption(5, 1, 5));
+		var info3 = get_3_entries_info(fix_rank_enemy(5, true), seed, info.entries.slice(0, 3).concat(info2.entries));
+		console.log(info3.entries.map(function(x) {return x.name}));
 	});
 });
+
+function main1() {
+	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
+	var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"]
+	var ng_abilities2 = ["ゆうばく"];
+	// ムクホかラティの少なくとも一方で上から一撃で倒せる相手
+	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
+	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
+	var rai = gen_poke(RANK_OPEN_8, true, factory_data[788], 0);
+	var brave = waza_fromname[mukuho.entry.move[0]];
+	var ngs = [], num = 0;
+	for (var i = 623; i <= 950; i ++) {
+		var ret1 = check_1turn_ko(mukuho, i, brave, ng_items, ng_abilities);
+		var ret2 = check_1turn_ko(rathi, i, null, ng_items, ng_abilities2);
+		if (ret1 == "skipped" || ret2 == "skipped") continue;
+		var ok = ret1 || ret2;
+		if (!ok) ngs.push(i);
+		num ++;
+	}
+	console.log(ngs.length+" / "+num);
+}
 
 // TODO: - 相手のダメージ技を考慮に入れる
 function completely_winnable(seed) {
