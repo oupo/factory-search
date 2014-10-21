@@ -30,8 +30,7 @@ $(function () {
 	});
 });
 
-// TODO: - いかく
-//       - 捨てポケを出している間に回復されたり積まれたりするかもしれない
+// TODO: - 捨てポケを出している間に回復されたり積まれたりするかもしれない
 //       - 相手のダメージ技を考慮に入れる
 function completely_winnable(seed) {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
@@ -62,6 +61,7 @@ function completely_winnable(seed) {
 	var foeCurr = 0;
 	var fixedWaza = null;
 	var justAfterFoeExchanged = true;
+	var atkMod = 0;
 	var history = [];
 
 	var stack = [];
@@ -76,6 +76,7 @@ function completely_winnable(seed) {
 			foeCurr: foeCurr,
 			fixedWaza: fixedWaza,
 			justAfterFoeExchanged: justAfterFoeExchanged,
+			atkMod: atkMod,
 			history: history.slice(0)
 		});
 		justAfterFoeExchanged = false;
@@ -88,6 +89,7 @@ function completely_winnable(seed) {
 		foeCurr = popped.foeCurr;
 		fixedWaza = popped.fixedWaza;
 		justAfterFoeExchanged = popped.justAfterFoeExchanged;
+		atkMod = popped.atkMod;
 		history  = popped.history;
 	}
 	function winnable() {
@@ -105,7 +107,7 @@ function completely_winnable(seed) {
 			var change = [0,1,2].filter(function(x){return myHps[x] > 0});
 			for (var i of change) {
 				stackPush();
-				curr = i, fixedWaza = null;
+				curr = i, fixedWaza = null, atkMod = 0;
 				var r = winnable();
 				stackPop();
 				if (r) return r;
@@ -125,7 +127,8 @@ function completely_winnable(seed) {
 			}
 			return r;
 		}
-		if (justAfterFoeExchanged) {
+		if (justAfterFoeExchanged && (foe.ability == "いかく" || (my.ability == "いかく" && foe.ability == "トレース"))) {
+			atkMod -= 1;
 		}
 		// たたかう場合
 		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
@@ -145,7 +148,7 @@ function completely_winnable(seed) {
 			stackPush();
 			myHps[change[i]] = 0;
 			curr = change[i];
-			fixedWaza = null;
+			fixedWaza = null, atkMod = 0;
 			history.push(mys[change[i]].name+"に交代");
 			var ret = winnable();
 			stackPop();
@@ -161,13 +164,13 @@ function completely_winnable(seed) {
 		var waza;
 		if (fixedWaza) {
 			waza = fixedWaza;
-			dmg = calcDamage(my, foe, waza);
+			dmg = calcDamage(my, foe, waza, {atkMod: atkMod});
 		} else {
 			// 一番ダメージの与えられる技を選択
 			my.waza.forEach(function (wn) {
 				var w = waza_fromname[wn];
 				if (w.basePower > 1 && w.accuracy == 100) {
-					var d = Math.min(calcDamage(my, foe, w), foeHps[foeCurr]);
+					var d = Math.min(calcDamage(my, foe, w, {atkMod: atkMod}), foeHps[foeCurr]);
 					if (dmg < d) {
 						dmg = d;
 						waza = w;
