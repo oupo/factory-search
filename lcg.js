@@ -67,3 +67,7 @@ LCG.prototype.rand = function () {
 LCG.prototype.step = function (n) {
 	this.seed = seed_step(this.seed, n);
 }
+
+function hex(x) {
+    return (0x100000000 + x).toString(16).slice(1);
+}

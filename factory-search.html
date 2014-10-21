@@ -11,21 +11,57 @@
 <script>
 $(function () {
 	initialize_factory(function () {
-		var lcg = new LCG(0);
-		var shuu = 5;
-		var is_open_level = true;
-		var is_hgss = true;
-		var trainers = rand_trainers(lcg, shuu, is_hgss);
-		var entries = rand_starter_entries(lcg, is_open_level, shuu, 0);
-		var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
-		var playerPokes = starters.slice(0, 3);
-		console.log(starters.map(function(x){return x.name}));
-		lcg.step(2); // shuffle
-		rand_enemy_loop(lcg, is_open_level, shuu, is_hgss, trainers, starters, playerPokes, function (i, enemy) {
-			console.log(enemy.map(function(x){return x.name}));
-		});
+		var i = 0;
+		function loop() {
+			document.title = hex(i);
+			while (true) {
+				if (i > 0xffffffff) {
+					console.log("finish");
+					return;
+				}
+				judge_seed(i ++);
+				if ((i & 0xffff) == 0) break;
+			}
+			setTimeout(loop, 0);
+		}
+		loop();
 	});
 });
+
+function judge_seed(seed) {
+	var lcg = new LCG(seed);
+	var shuu = 5;
+	var is_open_level = true;
+	var is_hgss = true;
+	var trainers = rand_trainers(lcg, shuu, is_hgss);
+	var entries = rand_starter_entries(lcg, is_open_level, shuu, 0);
+	var mukuho_idx = entries.map(function(x){return x.id}).indexOf(789);
+	var rathi_idx = entries.map(function(x){return x.id}).indexOf(933);
+	var suke_idx = entries.findIndex(function (x) {return x.item == "せんせいのツメ" || x.item == "のんきのおこう"});
+	if (mukuho_idx < 0 || rathi_idx < 0 || suke_idx < 0) return;
+	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
+	var mukuho = starters[mukuho_idx];
+	var rathi = starters[rathi_idx];
+	var suke = starters[suke_idx];
+	var playerPokes = [mukuho, rathi, suke];
+	//console.log(playerPokes.map(function(x) x.name));
+	lcg.step(2); // shuffle
+
+	var prev;
+	for (var i = 1; i <= 7; i ++) {
+		var seen = i == 1 ? starters : playerPokes.concat(prev);
+		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
+		var pokes = rand_enemy_poke(lcg, rank, seen.map(function(x){return x.entry}));
+
+		if (!completely_winnable(playerPokes, pokes)) {
+			break;
+		}
+		prev = pokes;
+		rand_gap(lcg, shuu, i, rank);
+	}
+	if (i - 1 >= 3)
+	console.log([seed, i - 1]);
+}
 
 function main1() {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
@@ -49,7 +85,7 @@ function main1() {
 }
 
 // TODO: - 相手のダメージ技を考慮に入れる
-function completely_winnable(seed) {
+function completely_winnable(mys, foes) {
 	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
 	var ng_abilities = [
 		["ゆうばく", "ほのおのからだ", "ほうし"],
@@ -58,11 +94,6 @@ function completely_winnable(seed) {
 	];
 	var ng_waza = ["こらえる", "でんこうせっか", "マッハパンチ", "しんそく", "ねこだまし", "ふいうち", "しんくうは", "バレットパンチ", "こおりのつぶて", "かげうち", "アクアジェット"];
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
-	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
-	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
-	var suke = gen_poke(RANK_OPEN_8, true, factory_data[839], 0);
-	var mys = [mukuho, rathi, suke];
-	var foes = gen_enemy_pokes(RANK_OPEN_8, true, seed, mys);
 	//console.log(foes.map(function(x) { return x.name }));
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
@@ -201,6 +232,7 @@ function completely_winnable(seed) {
 				}
 			});
 		}
+		if (!waza) waza = waza_fromname["はねる"];
 		var newHp = Math.max(foeHps[foeCurr] - dmg, 0);
 		// 攻撃したときダメな特性だったら失敗とする
 		if (ng_abilities[curr].indexOf(foe.ability) >= 0) {
