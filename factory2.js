@@ -98,3 +98,71 @@ function rand_entry(lcg, rank) {
 	var count = end - start + 1;
 	return factory_data[end - lcg.rand() % count];
 }
+
+function rand_entries(lcg, rank, num, seen) {
+	var entries = [];
+	while (entries.length < num) {
+		var entry = rand_entry(lcg, rank);
+		if (!entries_collision(entry, entries, seen)) {
+			entries.push(entry);
+		}
+	}
+	return entries;
+}
+
+function rand_starter_entries(lcg, is_open_level, shuu, num_bonus) {
+	var entries = rand_entries(lcg, starter_rank(is_open_level, shuu), 6 - num_bonus, []);
+	var bonusEntries = rand_entries(lcg, starter_rank(is_open_level, shuu + 1), num_bonus, entries);
+	return entries.concat(bonusEntries);
+}
+
+function rand_pid(lcg, entries) {
+	var pids = [];
+	entries.forEach(function (entry) {
+		var nature = entry.nature;
+		var tid = lcg.rand();
+		var sid = lcg.rand();
+		do {
+			var pid_low = lcg.rand();
+			var pid_high = lcg.rand();
+			var pid = (pid_high << 16 | pid_low) >>> 0;
+		} while (pid % 25 != nature || is_shiny_pid(tid, sid, pid));
+		pids.push(pid);
+	});
+	return pids;
+}
+
+function starter_entiries_to_poke(is_open_level, shuu, num_bonus, entries, pids) {
+	var pokes = [];
+	var i;
+	for (i = 0; i < 6 - num_bonus; i ++) {
+		pokes.push(gen_poke(starter_rank(is_open_level, shuu), entries[i], pids[i] % 2));
+	}
+	for (; i < 6; i ++) {
+		pokes.push(gen_poke(starter_rank(is_open_level, shuu + 1), entries[i], pids[i] % 2));
+	}
+	return pokes;
+}
+
+// damage.jsに渡すためのポケモンデータを作る
+function gen_poke(rank, entry, ability_index) {
+	var status = get_status(rank, entry);
+	var pokemon = entry.pokemon;
+	return {
+		name: pokemon.name,
+		level: rank.is_open_level ? 100 : 50,
+		hp: status[0],
+		atk: status[1],
+		def: status[2],
+		spAtk: status[3],
+		spDef: status[4],
+		speed: status[5],
+		item: entry.item,
+		ability: pokemon.abilities[ability_index],
+		type1: pokemon.type1,
+		type2: pokemon.type2,
+		waza: entry.move,
+		entry: entry
+	};
+}
+
