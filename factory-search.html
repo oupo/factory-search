@@ -11,22 +11,25 @@
 <script>
 $(function () {
 	initialize_factory(function () {
-		var i = 0;
-		function loop() {
-			document.title = hex(i);
-			while (true) {
-				if (i > 0xffffffff) {
-					console.log("finish");
-					return;
-				}
-				judge_seed(i ++);
-				if ((i & 0xffff) == 0) break;
-			}
-			setTimeout(loop, 0);
-		}
-		loop();
 	});
 });
+
+function main0() {
+	var i = 0;
+	function loop() {
+		document.title = hex(i);
+		while (true) {
+			if (i > 0xffffffff) {
+				console.log("finish");
+				return;
+			}
+			judge_seed(i ++);
+			if ((i & 0xffff) == 0) break;
+		}
+		setTimeout(loop, 0);
+	}
+	loop();
+}
 
 function judge_seed(seed) {
 	var lcg = new LCG(seed);
@@ -82,6 +85,17 @@ function main1() {
 		num ++;
 	}
 	console.log(ngs.length+" / "+num);
+}
+
+
+function cw(seed) {
+	var mukuho = gen_poke(starter_rank(true, 5), factory_data[789], 0);
+	var rathi  = gen_poke(starter_rank(true, 5), factory_data[933], 0);
+	var suke   = gen_poke(starter_rank(true, 5), factory_data[839], 0);
+	var mys = [mukuho, rathi, suke];
+	var lcg = new LCG(seed);
+	var foes = rand_enemy_poke(lcg, trainer_rank(true, 5), [mukuho, rathi, suke].map(function(x){return x.entry}));
+	return completely_winnable(mys, foes);
 }
 
 // TODO: - 相手のダメージ技を考慮に入れる

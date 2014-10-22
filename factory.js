@@ -68,6 +68,14 @@ function starter_rank(is_open_level, rank) {
 	return Rank.objects[is_open_level][Math.min(rank, 8)];
 }
 
+function trainer_rank(is_open_level, rank) {
+    var r = Math.min(rank, 8);
+	if (is_open_level) {
+		return Rank.objectsOpenTrainer[r];
+	}
+	return Rank.objects[is_open_level][r];
+}
+
 function trainer_id_to_rank(is_open_level, is_hgss, id) {
 	switch (id) {
 	case silver_nejiki_id:
@@ -76,10 +84,7 @@ function trainer_id_to_rank(is_open_level, is_hgss, id) {
 		return Rank.goldNejiki[is_open_level][is_hgss];
 	}
 	var r = trainer_id_to_rank_basis(id);
-	if (is_open_level) {
-		return Rank.objectsOpenTrainer[r];
-	}
-	return Rank.objects[is_open_level][r];
+    return trainer_rank(is_open_level, r);
 }
 
 function trainer_id_to_rank_basis(id) {
