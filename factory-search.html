@@ -91,8 +91,8 @@ function main1() {
 function cw(seed) {
 	var mukuho = gen_poke(starter_rank(true, 5), factory_data[789], 0);
 	var rathi  = gen_poke(starter_rank(true, 5), factory_data[933], 0);
-	var suke   = gen_poke(starter_rank(true, 5), factory_data[839], 0);
-	var mys = [mukuho, rathi, suke];
+	var maji   = gen_poke(starter_rank(true, 5), factory_data[821], 0);
+	var mys = [mukuho, rathi, maji];
 	var lcg = new LCG(seed);
 	var foes = rand_enemy_poke(lcg, trainer_rank(true, 5), [mukuho, rathi, suke].map(function(x){return x.entry}));
 	return completely_winnable(mys, foes);
@@ -108,6 +108,7 @@ function completely_winnable(mys, foes) {
 	];
 	var ng_waza = ["こらえる"];
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
+	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "みらいよち", "かみなり", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
 	//console.log(foes.map(function(x) { return x.name }));
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
