@@ -109,6 +109,7 @@ function initialize_waza(waza_csv_text) {
 		var accuracy = Number(row[3]);
 		var type = row[5];
 		var isPhysical = row[6] == "物理";
+        var priority = Number(row[10]);
 		waza_data[i + 1] = {
 			id: i + 1,
 			name: name,
@@ -116,6 +117,7 @@ function initialize_waza(waza_csv_text) {
 			accuracy: accuracy,
 			type: type,
 			isPhysical: isPhysical,
+            priority: priority,
 		};
 		waza_fromname[name] = waza_data[i + 1];
 	}

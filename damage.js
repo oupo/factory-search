@@ -16,6 +16,11 @@ function calcDamage(userPoke, foePoke, waza, options) {
 	var ch = 1; // 急所はなし
 	var r = 85; // 最小乱数
 
+	if (options.max) {
+		ch = 2;
+		r = 100;
+		if (userPoke.ability == "スナイパー") ch = 3;
+	}
 	var type1 = typeChart(waza.type, foePoke.type1);
 	var type2 = foePoke.type1 == foePoke.type2 ? 1 : typeChart(waza.type, foePoke.type2);
 

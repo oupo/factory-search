@@ -106,7 +106,7 @@ function completely_winnable(mys, foes) {
 		["ゆうばく"],
 		[]
 	];
-	var ng_waza = ["こらえる", "でんこうせっか", "マッハパンチ", "しんそく", "ねこだまし", "ふいうち", "しんくうは", "バレットパンチ", "こおりのつぶて", "かげうち", "アクアジェット"];
+	var ng_waza = ["こらえる"];
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
 	//console.log(foes.map(function(x) { return x.name }));
 
@@ -116,7 +116,6 @@ function completely_winnable(mys, foes) {
 	if (foes.some(function(x) { return x.waza.some(function(w) { return ng_waza.indexOf(w) >= 0 }) })) {
 		return false;
 	}
-
 
 	var myHps = mys.map(function(x) { return x.hp });
 	var curr = 0;
@@ -228,6 +227,19 @@ function completely_winnable(mys, foes) {
 	function action() {
 		var my = mys[curr];
 		var foe = foes[foeCurr];
+		// 敵が先制攻撃技持ち
+		var senseiWaza = foe.waza.find(function(w){return waza_fromname[w].priority == 1});
+		var myDmg = 0;
+		if (senseiWaza) {
+			myDmg = calcDamage(foe, my, waza_fromname[senseiWaza], {max: true});
+			if (myHps[curr] <= myDmg) {
+				stackPush();
+				myHps[curr] -= myDmg;
+				var r = winnable();
+				stackPop();
+				return r;
+			}
+		}
 		var dmg = 0;
 		var waza;
 		if (fixedWaza) {
@@ -257,6 +269,7 @@ function completely_winnable(mys, foes) {
 			return false;
 		}
 		stackPush();
+		myHps[curr] -= myDmg;
 		if (waza.name == "ブレイブバード") {
 			myHps[curr] -= int(dmg/3);
 		}
@@ -266,6 +279,9 @@ function completely_winnable(mys, foes) {
 		foeHps[foeCurr] = newHp;
 		if (newHp > 0) { // 相手のHPが残っている
 			myHps[curr] = 0;
+		}
+		if (senseiWaza) {
+			history.push(foe.name+"が"+my.name+"に"+senseiWaza+"("+myDmg+")");
 		}
 		history.push(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
 		var ret = winnable();
