@@ -69,7 +69,7 @@ function starter_rank(is_open_level, rank) {
 }
 
 function trainer_rank(is_open_level, rank) {
-    var r = Math.min(rank, 8);
+	var r = Math.min(rank, 8);
 	if (is_open_level) {
 		return Rank.objectsOpenTrainer[r];
 	}

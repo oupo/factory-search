@@ -11,7 +11,7 @@ function calcComputedSpeed(poke) {
 }
 
 function calcDamage(userPoke, foePoke, waza, options) {
-    if (!options) options = {};
+	if (!options) options = {};
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	var ch = 1; // 急所はなし
 	var r = 85; // 最小乱数
@@ -108,11 +108,11 @@ function calcBasePower(userPoke, foePoke, waza, effective) {
 function calcAttack(userPoke, foePoke, waza, options) {
 	var atk = waza.isPhysical ? userPoke.atk : userPoke.spAtk;
 
-    // 能力変化 (こうげきのみ)
-    var SM_multiplier = [2/8, 2/7, 2/6, 2/5, 2/4, 2/3, 2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2];
-    if (waza.isPhysical && options.atkMod != null) {
-        atk = int(atk * SM_multiplier[options.atkMod + 6]);
-    }
+	// 能力変化 (こうげきのみ)
+	var SM_multiplier = [2/8, 2/7, 2/6, 2/5, 2/4, 2/3, 2/2, 3/2, 4/2, 5/2, 6/2, 7/2, 8/2];
+	if (waza.isPhysical && options.atkMod != null) {
+		atk = int(atk * SM_multiplier[options.atkMod + 6]);
+	}
 
 	// ignore ヨガパワー ちからもち フラワーギフト こんじょう はりきり スロースタート プラス マイナス ソーラーパワー
 

@@ -69,5 +69,5 @@ LCG.prototype.step = function (n) {
 }
 
 function hex(x) {
-    return (0x100000000 + x).toString(16).slice(1);
+	return (0x100000000 + x).toString(16).slice(1);
 }
