@@ -11,7 +11,7 @@
 <script>
 $(function () {
 	initialize_factory(function () {
-		main0();
+		//main0();
 	});
 });
 
@@ -111,6 +111,7 @@ function completely_winnable(mys, foes) {
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
 	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "みらいよち", "かみなり", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
 	//console.log(foes.map(function(x) { return x.entry.id }));
+	show_damage_table(mys, foes);
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
 		return false;
@@ -305,6 +306,34 @@ function completely_winnable(mys, foes) {
 		stackPop();
 		return ret;
 	}
+}
+
+function show_damage_table(mys, foes) {
+	console.table(foes.map (function (foe) {
+		return [foe.name, foe.item, foe.entry.effort, ...foe.waza];
+	}));
+	var table = [];
+	mys.forEach (function (my) {
+		var obj = {};
+		obj["my"] = my.name;
+		foes.forEach (function (foe) {
+			var cell = calcComputedSpeed(foe) < calcComputedSpeed(my) ? "先制" : "後攻";
+			var dmg = 0;
+			my.waza.forEach(function (wn) {
+				var w = waza_fromname[wn];
+				if (w.basePower > 1 && w.accuracy == 100) {
+					var d = calcDamage(my, foe, w);
+					if (dmg < d) {
+						dmg = d;
+					}
+				}
+			});
+			cell += " " + int(dmg / foe.hp * 100) + "%";
+			obj[foe.name] = cell;
+		});
+		table.push(obj);
+	});
+	console.table(table);
 }
 
 function check_1turn_ko(my, entryid, fixedWaza, ng_items, ng_abilities) {
