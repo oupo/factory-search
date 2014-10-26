@@ -173,13 +173,14 @@ function completely_winnable(mys, foes) {
 		history  = popped.history;
 	}
 	function winnable() {
-		//console.log([myHps.join(","), curr, foeHps.join(","), foeCurr, history.join(",")]);
+		//console.log("-".repeat(stack.length) + [myHps.join(","), curr, foeHps.join(","), foeCurr, history[history.length-1]].join(" "));
 		var my = mys[curr];
 		var foe = foes[foeCurr];
 		if (myHps.every(function(x) { return x <= 0 })) {
 			return false;
 		}
 		if (foeHps.every(function(x) { return x <= 0 })) {
+			//console.log("-".repeat(stack.length) + "succeed");
 			return history;
 		}
 		// 現在HPが0→交換
@@ -188,6 +189,7 @@ function completely_winnable(mys, foes) {
 			for (var i of change) {
 				stackPush();
 				curr = i, fixedWaza = null, atkMod = 0;
+				history.push(mys[curr].name+"を繰り出す");
 				var r = winnable();
 				stackPop();
 				if (r) return r;
@@ -232,9 +234,10 @@ function completely_winnable(mys, foes) {
 		for (var i = 0; i < change.length; i ++) {
 			var c = change[i];
 			stackPush();
-			myHps[c] = 0;
 			if (mys[c].item == "きあいのタスキ" && myHps[c] == mys[c].hp && foe.waza.every(function(w){return ng_waza3_code.indexOf(w.effectCode) < 0})) {
 				myHps[c] = 1;
+			} else {
+				myHps[c] = 0;
 			}
 			curr = change[i];
 			fixedWaza = null, atkMod = 0;
