@@ -12,6 +12,8 @@ function calcComputedSpeed(poke) {
 
 function calcDamage(userPoke, foePoke, waza, options) {
 	if (!options) options = {};
+	if (waza.basePower <= 1) return 0;
+	if (!options.max && waza.accuracy < 100 && waza.effectCode != 17) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	var ch = 1; // 急所はなし
 	var r = 85; // 最小乱数
@@ -25,8 +27,14 @@ function calcDamage(userPoke, foePoke, waza, options) {
 	var type2 = foePoke.type1 == foePoke.type2 ? 1 : typeChart(waza.type, foePoke.type2);
 
 	// Same Type Attack Bonus
-	// ignore てきおうりょく
-	var stab = waza.type == userPoke.type1 || waza.type == userPoke.type2 ? 1.5 : 1; 
+	var stab = 1;
+	if (waza.type == userPoke.type1 || waza.type == userPoke.type2) {
+		if (userPoke.ability == "てきおうりょく") {
+			stab = 2;
+		} else {
+			stab = 1.5;
+		}
+	}
 
 	// ignore やけど、光の壁、リフレクター、ダブルバトル、雨、晴れ、もらい火
 	var mod1 = 1;
