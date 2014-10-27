@@ -34,7 +34,7 @@ function main0() {
 
 function judge_seed(seed) {
 	var lcg = new LCG(seed);
-	var shuu = 5;
+	var shuu = 4;
 	var is_open_level = true;
 	var is_hgss = true;
 	var trainers = rand_trainers(lcg, shuu, is_hgss);
@@ -54,7 +54,6 @@ function judge_seed(seed) {
 		if (idx == mukuho_idx || idx == maji_idx) continue;
 		var suke = starters[idx];
 		var playerPokes = [mukuho, maji, suke];
-		//console.log(playerPokes.map(function(x) x.name));
 
 		if (!nodbg) console.table(playerPokes.map (function (poke) {
 			return [poke.name, poke.item, poke.ability, poke.entry.effort, ...poke.waza, poke.hp];
@@ -74,8 +73,8 @@ function judge_seed(seed) {
 			prev = pokes;
 			rand_gap(l, shuu, i, rank);
 		}
-		if (i - 1 >= 6)
-		console.log([seed, i - 1, suke.name + "("+suke.item+")"]);
+		if (i - 1 >= 7)
+		console.log([seed, idx, i - 1, suke.name + "("+suke.item+")"]);
 	}
 }
 
@@ -136,7 +135,7 @@ function completely_winnable(mys, foes, nodbg) {
 	];
 	var ng_waza = ["こらえる"];
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
-	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
+	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "あられ", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
 	if (!nodbg) show_damage_table(mys, foes);
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
