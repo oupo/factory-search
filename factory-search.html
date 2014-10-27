@@ -48,6 +48,7 @@ function judge_seed(seed) {
 	//var rathi = starters[rathi_idx];
 	var maji = starters[maji_idx];
 	lcg.step(2); // shuffle
+	var nodbg = true;
 	for (var idx = 0; idx < 6; idx ++) {
 		var l = new LCG(lcg.seed);
 		if (idx == mukuho_idx || idx == maji_idx) continue;
@@ -55,13 +56,16 @@ function judge_seed(seed) {
 		var playerPokes = [mukuho, maji, suke];
 		//console.log(playerPokes.map(function(x) x.name));
 
+		if (!nodbg) console.table(playerPokes.map (function (poke) {
+			return [poke.name, poke.item, poke.ability, poke.entry.effort, ...poke.waza, poke.hp];
+		}));
 		var prev;
 		for (var i = 1; i <= 7; i ++) {
 			var seen = i == 1 ? starters : playerPokes.concat(prev);
 			var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
 			var pokes = rand_enemy_poke(l, rank, seen.map(function(x){return x.entry}));
 
-			var nodbg = true;
+			if (!nodbg) console.log(i);
 			var ret = completely_winnable(playerPokes, pokes, nodbg);
 			if (!ret) {
 				break;
@@ -243,7 +247,7 @@ function completely_winnable(mys, foes, nodbg) {
 		for (var i = 0; i < change.length; i ++) {
 			var c = change[i];
 			stackPush();
-			if (mys[c].item == "きあいのタスキ" && myHps[c] == mys[c].hp && foe.waza.every(function(w){return ng_waza3_code.indexOf(w.effectCode) < 0})) {
+			if (mys[c].item == "きあいのタスキ" && myHps[c] == mys[c].hp && foe.waza.every(function(w){return ng_waza3_code.indexOf(waza_fromname[w].effectCode) < 0})) {
 				myHps[c] = 1;
 			} else {
 				myHps[c] = 0;
@@ -336,7 +340,7 @@ function completely_winnable(mys, foes, nodbg) {
 }
 
 function show_damage_table(mys, foes) {
-	[mys, foes].forEach (function (pokes) {
+	[foes].forEach (function (pokes) {
 		console.table(pokes.map (function (poke) {
 			return [poke.name, poke.item, poke.ability, poke.entry.effort, ...poke.waza, poke.hp];
 		}));
