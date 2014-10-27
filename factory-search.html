@@ -40,31 +40,39 @@ function judge_seed(seed) {
 	var trainers = rand_trainers(lcg, shuu, is_hgss);
 	var entries = rand_starter_entries(lcg, is_open_level, shuu, 0);
 	var mukuho_idx = entries.map(function(x){return x.id}).indexOf(789);
-	var rathi_idx = entries.map(function(x){return x.id}).indexOf(933);
+	//var rathi_idx = entries.map(function(x){return x.id}).indexOf(933);
 	var maji_idx = entries.map(function(x){return x.id}).indexOf(821);
-	if (mukuho_idx < 0 || rathi_idx < 0 || maji_idx < 0) return;
+	if (mukuho_idx < 0 || maji_idx < 0) return;
 	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
 	var mukuho = starters[mukuho_idx];
-	var rathi = starters[rathi_idx];
+	//var rathi = starters[rathi_idx];
 	var maji = starters[maji_idx];
-	var playerPokes = [mukuho, rathi, maji];
-	//console.log(playerPokes.map(function(x) x.name));
 	lcg.step(2); // shuffle
+	for (var idx = 0; idx < 6; idx ++) {
+		var l = new LCG(lcg.seed);
+		if (idx == mukuho_idx || idx == maji_idx) continue;
+		var suke = starters[idx];
+		var playerPokes = [mukuho, maji, suke];
+		//console.log(playerPokes.map(function(x) x.name));
 
-	var prev;
-	for (var i = 1; i <= 7; i ++) {
-		var seen = i == 1 ? starters : playerPokes.concat(prev);
-		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
-		var pokes = rand_enemy_poke(lcg, rank, seen.map(function(x){return x.entry}));
+		var prev;
+		for (var i = 1; i <= 7; i ++) {
+			var seen = i == 1 ? starters : playerPokes.concat(prev);
+			var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
+			var pokes = rand_enemy_poke(l, rank, seen.map(function(x){return x.entry}));
 
-		if (!completely_winnable(playerPokes, pokes)) {
-			break;
+			var nodbg = true;
+			var ret = completely_winnable(playerPokes, pokes, nodbg);
+			if (!ret) {
+				break;
+			}
+			if (!nodbg) ret.forEach(function(r) console.log(r));
+			prev = pokes;
+			rand_gap(l, shuu, i, rank);
 		}
-		prev = pokes;
-		rand_gap(lcg, shuu, i, rank);
+		if (i - 1 >= 6)
+		console.log([seed, i - 1, suke.name + "("+suke.item+")"]);
 	}
-	if (i - 1 >= 4)
-	console.log([seed, i - 1]);
 }
 
 function main1() {
@@ -104,19 +112,19 @@ function cw2(seed) {
 	return completely_winnable(mys, foes);
 }
 
-function cw(seed) {
+function cw(seed, nodbg) {
 	var mukuho = gen_poke(starter_rank(true, 5), factory_data[789], 0);
 	var rathi  = gen_poke(starter_rank(true, 5), factory_data[933], 0);
 	var maji   = gen_poke(starter_rank(true, 5), factory_data[821], 0);
 	var mys = [mukuho, rathi, maji];
 	var lcg = new LCG(seed);
 	var foes = rand_enemy_poke(lcg, trainer_rank(true, 5), [mukuho, rathi, maji].map(function(x){return x.entry}));
-	return completely_winnable(mys, foes);
+	return completely_winnable(mys, foes, nodbg);
 }
 
 // TODO: - 相手のダメージ技を考慮に入れる
-function completely_winnable(mys, foes) {
-	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
+function completely_winnable(mys, foes, nodbg) {
+	var ng_items = ["せんせいのツメ"];
 	var ng_abilities = [
 		["ゆうばく", "ほのおのからだ", "ほうし"],
 		["ゆうばく"],
@@ -124,9 +132,8 @@ function completely_winnable(mys, foes) {
 	];
 	var ng_waza = ["こらえる"];
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
-	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "みらいよち", "かみなり", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
-	//console.log(foes.map(function(x) { return x.entry.id }));
-	show_damage_table(mys, foes);
+	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
+	if (!nodbg) show_damage_table(mys, foes);
 
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
 		return false;
@@ -173,14 +180,14 @@ function completely_winnable(mys, foes) {
 		history  = popped.history;
 	}
 	function winnable() {
-		//console.log("-".repeat(stack.length) + [myHps.join(","), curr, foeHps.join(","), foeCurr, history[history.length-1]].join(" "));
+		//if (!nodbg) console.log("-".repeat(stack.length) + [myHps.join(","), curr, foeHps.join(","), foeCurr, history[history.length-1]].join(" "));
 		var my = mys[curr];
 		var foe = foes[foeCurr];
 		if (myHps.every(function(x) { return x <= 0 })) {
 			return false;
 		}
 		if (foeHps.every(function(x) { return x <= 0 })) {
-			//console.log("-".repeat(stack.length) + "succeed");
+			//if (!nodbg) console.log("-".repeat(stack.length) + "succeed");
 			return history;
 		}
 		// 現在HPが0→交換
@@ -198,7 +205,7 @@ function completely_winnable(mys, foes) {
 		}
 		if (foeHps[foeCurr] <= 0) {
 			var change = [0,1,2].filter(function(x){return foeHps[x] > 0});
-			var r;
+			var rs = []
 			for (var i of change) {
 				stackPush();
 				foeCurr = i;
@@ -206,8 +213,10 @@ function completely_winnable(mys, foes) {
 				var r = winnable();
 				stackPop();
 				if (!r) return false;
+				rs.push(r);
 			}
-			return r;
+			if (rs.length == 1) return rs[0];
+			return rs;
 		}
 		if (justAfterFoeExchanged && (foe.ability == "いかく" || (my.ability == "いかく" && foe.ability == "トレース"))) {
 			atkMod -= 1;
@@ -350,7 +359,7 @@ function show_damage_table(mys, foes) {
 }
 
 function damageAllWaza(my, foe, max) {
-	var dmg = 0;
+	var dmg = -1;
 	var waza;
 	my.waza.forEach(function (wn) {
 		var w = waza_fromname[wn];

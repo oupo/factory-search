@@ -14,6 +14,7 @@ function calcDamage(userPoke, foePoke, waza, options) {
 	if (!options) options = {};
 	if (waza.basePower <= 1) return 0;
 	if (!options.max && waza.accuracy < 100 && waza.effectCode != 17) return 0;
+	if (!options.max && (foePoke.item == "ひかりのこな" || foePoke.item == "のんきのおこう")) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	var ch = 1; // 急所はなし
 	var r = 85; // 最小乱数
@@ -45,7 +46,12 @@ function calcDamage(userPoke, foePoke, waza, options) {
 	var basePower = calcBasePower(userPoke, foePoke, waza);
 	var atk = calcAttack(userPoke, foePoke, waza, options);
 	var def = calcDefence(userPoke, foePoke, waza);
-	return calcDamage0(userPoke.level, basePower, atk, def, mod1, ch, mod2, r, stab, type1, type2, mod3);
+	var dmg = calcDamage0(userPoke.level, basePower, atk, def, mod1, ch, mod2, r, stab, type1, type2, mod3);
+
+	if (!options.max && (foePoke.item == "きあいのタスキ" || foePoke.item == "きあいのハチマキ")) {
+		dmg = Math.min(dmg, foePoke.hp - 1);
+	}
+	return dmg;
 }
 
 function isToZero(userPoke, foePoke, waza) {
