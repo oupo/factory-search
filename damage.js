@@ -1,5 +1,7 @@
 "use strict";
 
+// ref: http://www.smogon.com/dp/articles/damage_formula
+
 function calcComputedSpeed(poke) {
 	if (poke.item == "こだわりスカーフ") {
 		return int(poke.speed * 1.5);

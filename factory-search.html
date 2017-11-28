@@ -11,12 +11,11 @@
 <script>
 $(function () {
 	initialize_factory(function () {
-		main1();
-		//main0();
+		main_search_seed(judge_seed_lv50_shuu2);
 	});
 });
 
-function main0() {
+function main_search_seed(judge_seed) {
 	var i = 0;
 	function loop() {
 		document.title = hex(i);
@@ -25,7 +24,7 @@ function main0() {
 				console.log("finish");
 				return;
 			}
-			judge_seed(i ++);
+			if (judge_seed(i ++)) return;
 			if ((i & 0xffff) == 0) break;
 		}
 		setTimeout(loop, 0);
@@ -33,7 +32,7 @@ function main0() {
 	loop();
 }
 
-function judge_seed(seed) {
+function judge_seed_open_shuu4(seed) {
 	var lcg = new LCG(seed);
 	var shuu = 4;
 	var is_open_level = true;
@@ -50,6 +49,11 @@ function judge_seed(seed) {
 	var maji = starters[maji_idx];
 	lcg.step(2); // shuffle
 	var nodbg = true;
+	var ng_abilities = [
+		["ゆうばく", "ほのおのからだ", "ほうし"],
+		["ゆうばく"],
+		[]
+	]
 	for (var idx = 0; idx < 6; idx ++) {
 		var l = new LCG(lcg.seed);
 		if (idx == mukuho_idx || idx == maji_idx) continue;
@@ -66,7 +70,7 @@ function judge_seed(seed) {
 			var pokes = rand_enemy_poke(l, rank, seen.map(function(x){return x.entry}));
 
 			if (!nodbg) console.log(i);
-			var ret = completely_winnable(playerPokes, pokes, nodbg);
+			var ret = completely_winnable(playerPokes, pokes, ng_abilities, nodbg);
 			if (!ret) {
 				break;
 			}
@@ -74,29 +78,13 @@ function judge_seed(seed) {
 			prev = pokes;
 			rand_gap(l, shuu, i, rank);
 		}
-		if (i - 1 >= 7)
-		console.log([seed, idx, i - 1, suke.name + "("+suke.item+")"]);
-	}
-}
-
-function main1() {
-	var i = 0;
-	function loop() {
-		document.title = hex(i);
-		while (true) {
-			if (i > 0xffffffff) {
-				console.log("finish");
-				return;
-			}
-			judge_seed2(i ++);
-			if ((i & 0xffff) == 0) break;
+		if (i - 1 >= 7) {
+			console.log([seed, idx, i - 1, suke.name + "("+suke.item+")"]);
 		}
-		setTimeout(loop, 0);
 	}
-	loop();
 }
 
-function judge_seed2(seed) {
+function judge_seed_lv50_shuu1(seed) {
 	var lcg = new LCG(seed);
 	var shuu = 1;
 	var is_open_level = false;
@@ -165,6 +153,23 @@ function winnable2(playerPokes, pokes) {
 	return count2 >= 1 && pokes.length <= count;
 }
 
+function judge_seed_lv50_shuu2(seed) {
+	var lcg = new LCG(seed);
+	var shuu = 2;
+	var is_open_level = false;
+	var is_hgss = false;
+	var num_bonus = 1;
+	var trainers = rand_trainers(lcg, shuu, is_hgss);
+	var entries = rand_starter_entries(lcg, is_open_level, shuu, num_bonus);
+	var suba_idx = entries.map(function(x){return x.id}).indexOf(289);
+	if (suba_idx < 0) return;
+	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
+	var suba = starters[suba_idx];
+	lcg.step(2); // shuffle
+	console.log(seed);
+	return true;
+}
+
 function main2() {
 	var rank = starter_rank(false, 1);
 	var data = factory_data.slice(1, 1 + 150);
@@ -177,6 +182,7 @@ function main2() {
 	document.body.innerHTML = "<h2>hoge</h2><table>" + table +"</table>"
 }
 
+// 攻撃技を打ち合ったとき自分が勝ってHPがthreshold倍以上残るか (テキトー)
 function is_weaker(my, foe, threshold) {
 	var damageToFoe = damageAllWaza(my, foe, {ignoreAccuracy: true})[0];
 	var damageToMy = damageAllWaza(foe, my, {ignoreAccuracy: true})[0];
@@ -205,15 +211,12 @@ function is_weaker_than_nukenin(foe) {
 }
 
 // TODO: - 相手のダメージ技を考慮に入れる
-function completely_winnable(mys, foes, nodbg) {
+function completely_winnable(mys, foes, ng_abilities, nodbg) {
 	var ng_items = ["せんせいのツメ"];
-	var ng_abilities = [
-		["ゆうばく", "ほのおのからだ", "ほうし"],
-		["ゆうばく"],
-		[]
-	];
 	var ng_waza = ["こらえる"];
+	// 交換する場合にされたら困る技
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
+	// 道連れする場合にされたら困る技のコード
 	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "あられ", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
 	if (!nodbg) show_damage_table(mys, foes);
 
