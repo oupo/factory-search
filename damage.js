@@ -12,9 +12,12 @@ function calcComputedSpeed(poke) {
 
 function calcDamage(userPoke, foePoke, waza, options) {
 	if (!options) options = {};
+	if (waza.effectCode == 87) {
+		return userPoke.level; // ナイトヘッドとちちゅうなげ
+	}
 	if (waza.basePower <= 1) return 0;
-	if (!options.max && waza.accuracy < 100 && waza.effectCode != 17) return 0;
-	if (!options.max && (foePoke.item == "ひかりのこな" || foePoke.item == "のんきのおこう")) return 0;
+	if (!(options.max || options.ignoreAccuracy) && waza.accuracy < 100 && waza.effectCode != 17) return 0;
+	if (!(options.max || options.ignoreAccuracy) && (foePoke.item == "ひかりのこな" || foePoke.item == "のんきのおこう")) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	var ch = 1; // 急所はなし
 	var r = 85; // 最小乱数

@@ -11,6 +11,7 @@
 <script>
 $(function () {
 	initialize_factory(function () {
+		main1();
 		//main0();
 	});
 });
@@ -69,7 +70,7 @@ function judge_seed(seed) {
 			if (!ret) {
 				break;
 			}
-			if (!nodbg) ret.forEach(function(r) console.log(r));
+			if (!nodbg) ret.forEach((r) => console.log(r));
 			prev = pokes;
 			rand_gap(l, shuu, i, rank);
 		}
@@ -79,50 +80,128 @@ function judge_seed(seed) {
 }
 
 function main1() {
-	var ng_items = ["きあいのハチマキ", "せんせいのツメ", "きあいのタスキ", "ひかりのこな", "のんきのおこう"];
-	var ng_abilities = ["ゆうばく", "ほのおのからだ", "ほうし", "トレース", "いかく"]
-	var ng_abilities2 = ["ゆうばく"];
-	// ムクホかラティの少なくとも一方で上から一撃で倒せる相手
-	var mukuho = gen_poke(RANK_OPEN_8, true, factory_data[789], 0);
-	var rathi = gen_poke(RANK_OPEN_8, true, factory_data[933], 0);
-	var rai = gen_poke(RANK_OPEN_8, true, factory_data[788], 0);
-	var brave = waza_fromname[mukuho.entry.move[0]];
-	var ngs = [], num = 0;
-	for (var i = 623; i <= 950; i ++) {
-		var ret1 = check_1turn_ko(mukuho, i, brave, ng_items, ng_abilities);
-		var ret2 = check_1turn_ko(rathi, i, null, ng_items, ng_abilities2);
-		if (ret1 == "skipped" || ret2 == "skipped") continue;
-		var ok = ret1 || ret2;
-		if (!ok) ngs.push(i);
-		num ++;
+	var i = 0;
+	function loop() {
+		document.title = hex(i);
+		while (true) {
+			if (i > 0xffffffff) {
+				console.log("finish");
+				return;
+			}
+			judge_seed2(i ++);
+			if ((i & 0xffff) == 0) break;
+		}
+		setTimeout(loop, 0);
 	}
-	console.log(ngs.length+" / "+num);
+	loop();
 }
 
-
-function cw2(seed) {
-	var lv = false, shuu = 1;
-	var ibui   = gen_poke(starter_rank(false, 1), factory_data[64], 1);
-	var eipamu = gen_poke(starter_rank(false, 1), factory_data[105], 0);
-	var eneko  = gen_poke(starter_rank(false, 1), factory_data[116], 0);
-	var patiru = gen_poke(starter_rank(false, 1), factory_data[108], 0);
-	var koiru  = gen_poke(starter_rank(false, 1), factory_data[59], 0);
-	var hitode = gen_poke(starter_rank(false, 1), factory_data[85], 0);
-	var nuke   = gen_poke(starter_rank(false, 1), factory_data[16], 0);
-	var mys = [ibui, eipamu, hitode];
+function judge_seed2(seed) {
 	var lcg = new LCG(seed);
-	var foes = rand_enemy_poke(lcg, trainer_rank(false, 1), mys.map(function(x){return x.entry}));
-	return completely_winnable(mys, foes);
+	var shuu = 1;
+	var is_open_level = false;
+	var is_hgss = false;
+	var trainers = rand_trainers(lcg, shuu, is_hgss);
+	var entries = rand_starter_entries(lcg, is_open_level, shuu, 0);
+	var kutit_idx = entries.map(function(x){return x.id}).indexOf(118);
+	var nuke_idx = entries.map(function(x){return x.id}).indexOf(16);
+	if (kutit_idx < 0 || nuke_idx < 0) return;
+	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
+	var kutit = starters[kutit_idx];
+	var nuke = starters[nuke_idx];
+	lcg.step(2); // shuffle
+	var nodbg = true;
+	for (var idx = 0; idx < 6; idx ++) {
+		var l = new LCG(lcg.seed);
+		if (idx == kutit_idx || idx == nuke_idx) continue;
+		var suke_first = starters[idx];
+		var sukes = [suke_first];
+		var playerPokes = [kutit, nuke, suke_first];
+		var hist;
+		if (hist = judge(1, lcg.seed, null, playerPokes, starters, null)) {
+			console.log([seed, [suke_first].concat(hist).map(x => x.name)]);
+			return true;
+		}
+	}
+	return false;
+
+	function judge(i, seed, oldPlayerPokes, playerPokes, starters, prev) {
+		if (i == 8) return [];
+		
+		var lcg = new LCG(seed);
+		var seen = i == 1 ? starters : oldPlayerPokes.concat(prev);
+		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
+		var pokes = rand_enemy_poke(lcg, rank, seen.map(function(x){return x.entry}));
+		var ret = winnable2(playerPokes, pokes);
+		if (ret) {
+			rand_gap(lcg, shuu, i, rank);
+			for (var j = 0; j < 3; j ++) {
+				var newPlayerPokes = playerPokes.concat();
+				newPlayerPokes[2] = pokes[j];
+				var hist;
+				if (hist = judge(i + 1, lcg.seed, playerPokes, newPlayerPokes, starters, pokes)) {
+					return [pokes[j]].concat(hist);
+				}
+			}
+		} else {
+			return false;
+		}
+	}
 }
 
-function cw(seed, nodbg) {
-	var mukuho = gen_poke(starter_rank(true, 5), factory_data[789], 0);
-	var rathi  = gen_poke(starter_rank(true, 5), factory_data[933], 0);
-	var maji   = gen_poke(starter_rank(true, 5), factory_data[821], 0);
-	var mys = [mukuho, rathi, maji];
-	var lcg = new LCG(seed);
-	var foes = rand_enemy_poke(lcg, trainer_rank(true, 5), [mukuho, rathi, maji].map(function(x){return x.entry}));
-	return completely_winnable(mys, foes, nodbg);
+function winnable2(playerPokes, pokes) {
+	var ng_pokes = ["タテトプス", "ゴローン", "ポワルン", "パラセクト"];
+	var ng_waza_code = ["すなあらし"]
+	  .map((x) => waza_fromname[x].effectCode);	
+	if (pokes.some(poke => ng_pokes.indexOf(poke.name) >= 0 )) return false;
+	if (pokes.some(poke => poke.waza.some(w => ng_waza_code.indexOf(waza_fromname[w].effectCode) >= 0 ))) return false;
+	var count = 0;
+	var count2 = 0;
+	for(var i = 0; i < pokes.length; i ++) {
+		var poke = pokes[i];
+		if (is_weaker(playerPokes[0], poke, 0.5) || is_weaker_than_nukenin(poke) || is_weaker(playerPokes[2], poke, 0.5)) count ++;
+		if (is_weaker_than_nukenin(poke)) count2 ++;
+	}
+	return count2 >= 1 && pokes.length <= count;
+}
+
+function main2() {
+	var rank = starter_rank(false, 1);
+	var data = factory_data.slice(1, 1 + 150);
+	//data = factory_data.slice(151, 151 + 100);
+	var kuti = gen_poke(rank, factory_data[118], 0);
+	data = data.filter((entry) => { return is_weaker(kuti, gen_poke(rank, entry, 0), 0.3) });
+	var table = data.map(x => {return "<tr><td>" + x.id + "<td>" + x.name + "<td>" + x.item + "<td>" + x.move.join(" ") +
+	"<td>" + x.pokemon.abilities[0] + "<td>" + (x.pokemon.abilities[0] == x.pokemon.abilities[1] ? "-" : x.pokemon.abilities[1]) +
+	"<td>" + x.pokemon.stats.reduce((x,y)=>x+y, 0) + "<td>" + get_status(trainer_rank(false, 1), x)[5]}).join("")
+	document.body.innerHTML = "<h2>hoge</h2><table>" + table +"</table>"
+}
+
+function is_weaker(my, foe, threshold) {
+	var damageToFoe = damageAllWaza(my, foe, {ignoreAccuracy: true})[0];
+	var damageToMy = damageAllWaza(foe, my, {ignoreAccuracy: true})[0];
+	var turn = Math.ceil(foe.hp / damageToFoe);
+	if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
+		turn ++;
+	}
+	return turn * damageToMy < my.hp * threshold;
+}
+
+function is_weaker_than_nukenin(foe) {
+	var ng_abilities = ["どくのトゲ", "ゆきふらし", "ほうし"];
+	var ng_waza_code = ["あやしいひかり", "どくどく", "やどりぎのタネ", "なやみのタネ", "すなあらし", "おにび", "いばる", ]
+	  .map((x) => { return waza_fromname[x].effectCode;});
+	if (ng_abilities.indexOf(foe.ability) >= 0) {
+		return false;
+	}
+	if (foe.waza.some((w) => { return ng_waza_code.indexOf(waza_fromname[w].effectCode) >= 0 })) {
+		return false;
+	}
+	// むし・ゴーストに抜群な攻撃技を持っている
+	if (foe.waza.some((w) => { return waza_fromname[w].basePower > 0 && typeChart(waza_fromname[w].type, "むし") * typeChart(waza_fromname[w].type, "ゴースト") > 1})) {
+		return false;
+	}
+	return true;
 }
 
 // TODO: - 相手のダメージ技を考慮に入れる
@@ -338,81 +417,18 @@ function completely_winnable(mys, foes, nodbg) {
 	}
 }
 
-function show_damage_table(mys, foes) {
-	[foes].forEach (function (pokes) {
-		console.table(pokes.map (function (poke) {
-			return [poke.name, poke.item, poke.ability, poke.entry.effort, ...poke.waza, poke.hp];
-		}));
-	});
-	var table = [];
-	mys.forEach (function (my) {
-		var obj = {};
-		obj["my"] = my.name;
-		foes.forEach (function (foe) {
-			var cell = calcComputedSpeed(foe) < calcComputedSpeed(my) ? "先制" : "後攻";
-			var [dmg, waza] = damageAllWaza(my, foe, false);
-			cell += " " + int(dmg / foe.hp * 100) + "% ("+waza.name+")";
-			var [dmg2, waza2] = damageAllWaza(foe, my, true);
-			cell += " " + int(dmg2 / my.hp * 100) + "% ("+waza2.name+")";
-			obj[foe.name] = cell;
-		});
-		table.push(obj);
-	});
-	console.table(table);
-}
-
-function damageAllWaza(my, foe, max) {
+function damageAllWaza(my, foe, options) {
 	var dmg = -1;
 	var waza;
 	my.waza.forEach(function (wn) {
 		var w = waza_fromname[wn];
-		var d = calcDamage(my, foe, w, {max: max});
+		var d = calcDamage(my, foe, w, options);
 		if (dmg < d) {
 			dmg = d;
 			waza = w;
 		}
 	});
 	return [dmg, waza];
-}
-
-function check_1turn_ko(my, entryid, fixedWaza, ng_items, ng_abilities) {
-	var target = gen_poke(RANK_OPEN_8, true, factory_data[entryid], 0);
-	if (target.item == my.item || target.name == my.name) {
-		return "skipped";
-	}
-	var dmg = 0;
-	if (fixedWaza) {
-		dmg = damage(my, fixedWaza, entryid);
-	} else {
-		my.entry.move.forEach (function (waza) {
-			dmg = Math.max(dmg, damage(my, waza_fromname[waza], entryid));
-		});
-	}
-	var damageOk = dmg >= target.hp;
-
-	var speedOk = calcComputedSpeed(target) < calcComputedSpeed(my);
-	var itemOk = ng_items.indexOf(target.item) < 0;
-	var badAbility = target.entry.pokemon.abilities.filter(function(x) { return ng_abilities.indexOf(x) >= 0 });
-	var abilityOk = badAbility.length == 0;
-	var ok = speedOk && damageOk && itemOk && abilityOk;
-
-	var msg = target.name+":";
-	msg += (speedOk ? "" : " speedNG("+calcComputedSpeed(target)+")");
-	msg += (damageOk ? "" : " damageNG("+dmg+" / "+target.hp+")");
-	msg += (itemOk ? "" : " itemNG("+target.item+")");
-	msg += (abilityOk ? "" : " abilityNG("+badAbility.join(",")+")");
-	msg += (ok ? " OK" : "");
-
-	return ok;
-}
-
-function damage(userPoke, waza, index) {
-	// 2つの特性両方を試す
-	var target = gen_poke(RANK_OPEN_8, true, factory_data[index], 0);
-	var dmg1 = calcDamage(userPoke, target, waza);
-	var target = gen_poke(RANK_OPEN_8, true, factory_data[index], 1);
-	var dmg2 = calcDamage(userPoke, target, waza);
-	return Math.min(dmg1, dmg2);
 }
 
 </script>
