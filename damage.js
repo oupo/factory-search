@@ -44,6 +44,12 @@ function calcDamage(userPoke, foePoke, waza, options) {
 
 	// ignore やけど、光の壁、リフレクター、ダブルバトル、雨、晴れ、もらい火
 	var mod1 = 1;
+	if (userPoke.ability == "こんじょう" && options.hasStatusCondition) {
+		mod1 *= 1.5;
+	}
+	if (options.hasStatusCondition && waza.name == "からげんき") {
+		mod1 *= 2;
+	}
 
 	var mod2 = calcMod2(userPoke);
 	var mod3 = calcMod3(userPoke, foePoke, waza, (type1*type2) > 1);

@@ -11,12 +11,13 @@
 <script>
 $(function () {
 	initialize_factory(function () {
-		main_search_seed(judge_seed_lv50_shuu2);
+		//judge_seed_lv50_shuu2(4375);
+		//main_search_seed(judge_seed_lv50_shuu2);
 	});
 });
 
 function main_search_seed(judge_seed) {
-	var i = 0;
+	var i = 0x27000000;
 	function loop() {
 		document.title = hex(i);
 		while (true) {
@@ -40,12 +41,10 @@ function judge_seed_open_shuu4(seed) {
 	var trainers = rand_trainers(lcg, shuu, is_hgss);
 	var entries = rand_starter_entries(lcg, is_open_level, shuu, 0);
 	var mukuho_idx = entries.map(function(x){return x.id}).indexOf(789);
-	//var rathi_idx = entries.map(function(x){return x.id}).indexOf(933);
 	var maji_idx = entries.map(function(x){return x.id}).indexOf(821);
 	if (mukuho_idx < 0 || maji_idx < 0) return;
 	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
 	var mukuho = starters[mukuho_idx];
-	//var rathi = starters[rathi_idx];
 	var maji = starters[maji_idx];
 	lcg.step(2); // shuffle
 	var nodbg = true;
@@ -53,7 +52,7 @@ function judge_seed_open_shuu4(seed) {
 		["ゆうばく", "ほのおのからだ", "ほうし"],
 		["ゆうばく"],
 		[]
-	]
+	];
 	for (var idx = 0; idx < 6; idx ++) {
 		var l = new LCG(lcg.seed);
 		if (idx == mukuho_idx || idx == maji_idx) continue;
@@ -70,7 +69,7 @@ function judge_seed_open_shuu4(seed) {
 			var pokes = rand_enemy_poke(l, rank, seen.map(function(x){return x.entry}));
 
 			if (!nodbg) console.log(i);
-			var ret = completely_winnable(playerPokes, pokes, ng_abilities, nodbg);
+			var ret = completely_winnable(playerPokes, pokes, ng_abilities, true, nodbg);
 			if (!ret) {
 				break;
 			}
@@ -153,7 +152,7 @@ function winnable2(playerPokes, pokes) {
 	return count2 >= 1 && pokes.length <= count;
 }
 
-function judge_seed_lv50_shuu2(seed) {
+function judge_seed_lv50_shuu2(seed, dbg) {
 	var lcg = new LCG(seed);
 	var shuu = 2;
 	var is_open_level = false;
@@ -166,8 +165,46 @@ function judge_seed_lv50_shuu2(seed) {
 	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
 	var suba = starters[suba_idx];
 	lcg.step(2); // shuffle
-	console.log(seed);
-	return true;
+
+	var nodbg = !dbg;
+	var ng_abilities = [
+		["ゆうばく", "ほうし"],
+		["ゆうばく", "ほうし"],
+		["ゆうばく", "ほうし"]
+	];
+	//console.log(seed);
+	for (var idx = 0; idx < 6; idx ++) {
+		if (idx == suba_idx) continue;
+		for (var idx2 = idx + 1; idx2 < 6; idx2 ++) {
+			if (idx2 == suba_idx) continue;
+
+			var l = new LCG(lcg.seed);
+			var suke = starters[idx];
+			var suke2 = starters[idx2];
+			var playerPokes = [suba, suke, suke2];
+
+			var prev;
+			for (var i = 1; i <= 7; i ++) {
+				var seen = i == 1 ? starters : playerPokes.concat(prev);
+				var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
+				var pokes = rand_enemy_poke(l, rank, seen.map(function(x){return x.entry}));
+
+				var ret = completely_winnable(playerPokes, pokes, ng_abilities, i == 7, nodbg);
+				if (!ret) {
+					break;
+				}
+				if (!nodbg) {
+					console.log(i);
+					ret.forEach((r) => console.log(r));
+				}
+				prev = pokes;
+				rand_gap(l, shuu, i, rank);
+			}
+			if (i - 1 >= 7) {
+				console.log([seed, i - 1, suke.name + "("+suke.item+")", suke2.name + "("+suke2.item+")"]);
+			}
+		}
+	}
 }
 
 function main2() {
@@ -210,24 +247,22 @@ function is_weaker_than_nukenin(foe) {
 	return true;
 }
 
-// TODO: - 相手のダメージ技を考慮に入れる
-function completely_winnable(mys, foes, ng_abilities, nodbg) {
+function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 	var ng_items = ["せんせいのツメ"];
 	var ng_waza = ["こらえる"];
 	// 交換する場合にされたら困る技
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
 	// 道連れする場合にされたら困る技のコード
 	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "あられ", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
-	if (!nodbg) show_damage_table(mys, foes);
-
+	
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
 		return false;
 	}
 	if (foes.some(function(x) { return x.waza.some(function(w) { return ng_waza.indexOf(w) >= 0 }) })) {
 		return false;
 	}
-
 	var myHps = mys.map(function(x) { return x.hp });
+	var statusConds = mys.map((x) => "");
 	var curr = 0;
 	var foeHps = foes.map(function(x) { return x.hp });
 	var foeCurr = 0;
@@ -243,6 +278,7 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 	function stackPush() {
 		stack.push({
 			myHps: myHps.slice(0),
+			statusConds: statusConds.slice(0),
 			curr: curr,
 			foeHps: foeHps.slice(0),
 			foeCurr: foeCurr,
@@ -256,6 +292,7 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 	function stackPop() {
 		var popped = stack.pop();
 		myHps = popped.myHps;
+		statusConds = popped.statusConds;
 		curr = popped.curr;
 		foeHps = popped.foeHps;
 		foeCurr = popped.foeCurr;
@@ -265,17 +302,25 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 		history  = popped.history;
 	}
 	function winnable() {
-		//if (!nodbg) console.log("-".repeat(stack.length) + [myHps.join(","), curr, foeHps.join(","), foeCurr, history[history.length-1]].join(" "));
+		if (stack.length >= 15) {
+			return false;
+		}
+		if (stack.length >= 50) {
+			console.log("-".repeat(stack.length) + [myHps.join(","), curr, foeHps.join(","), foeCurr].join(" "));
+			console.log(history.join("\n"));
+			debugger;
+		}
+		//if (!nodbg) console.log("-".repeat(stack.length) + [myHps.join(","), curr, foeHps.join(","), foeCurr].join(" "));
 		var my = mys[curr];
 		var foe = foes[foeCurr];
 		if (myHps.every(function(x) { return x <= 0 })) {
-			return false;
+			return false; // 負け
 		}
 		if (foeHps.every(function(x) { return x <= 0 })) {
 			//if (!nodbg) console.log("-".repeat(stack.length) + "succeed");
-			return history;
+			return history; // 勝ち
 		}
-		// 現在HPが0→交換
+		// 現在HPが0→交換	
 		if (myHps[curr] <= 0) {
 			var change = [0,1,2].filter(function(x){return myHps[x] > 0});
 			for (var i of change) {
@@ -318,6 +363,7 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 			var ret = action();
 			if (ret) return ret;
 		}
+		if (!allowExchange) return false;
 		// 交換する場合→交換先は倒れる
 
 		// 相手が積み技などを持っていた場合
@@ -372,15 +418,16 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 		}
 		var dmg = 0;
 		var waza;
+		var opt = {atkMod: atkMod, hasStatusCondition: statusConds[curr] != ""};
 		if (fixedWaza) {
 			waza = fixedWaza;
-			dmg = calcDamage(my, foe, waza, {atkMod: atkMod});
+			dmg = calcDamage(my, foe, waza, opt);
 		} else {
 			// 一番ダメージの与えられる技を選択
 			my.waza.forEach(function (wn) {
 				var w = waza_fromname[wn];
-				if (w.basePower > 1 && w.accuracy == 100) {
-					var d = Math.min(calcDamage(my, foe, w, {atkMod: atkMod}), foeHps[foeCurr]);
+				if (w.name != "とんぼがえり" && w.basePower > 1 && w.accuracy == 100) {
+					var d = Math.min(calcDamage(my, foe, w, opt), foeHps[foeCurr]);
 					if (dmg < d) {
 						dmg = d;
 						waza = w;
@@ -388,7 +435,9 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 				}
 			});
 		}
-		if (!waza) waza = waza_fromname["はねる"];
+		if (!waza) {
+			return false;
+		}
 		var newHp = Math.max(foeHps[foeCurr] - dmg, 0);
 		// 攻撃したときダメな特性だったら失敗とする
 		if (ng_abilities[curr].indexOf(foe.ability) >= 0) {
@@ -408,15 +457,43 @@ function completely_winnable(mys, foes, ng_abilities, nodbg) {
 		}
 		foeHps[foeCurr] = newHp;
 		if (newHp > 0) { // 相手のHPが残っている
-			myHps[curr] = 0;
+			// TODO: 変な技を持っていたらHPを0にする
+			var [myDmg2, foeWaza] = foeMaxWaza(my, foe);
+			myHps[curr] -= myDmg2;
 		}
 		if (senseiWaza) {
 			history.push(foe.name+"が"+my.name+"に"+senseiWaza+"("+myDmg+")");
 		}
 		history.push(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
+		if (foeWaza) {
+			history.push(foe.name+"が"+my.name+"に"+foeWaza.name+"("+myDmg2+")");
+		}
+		var m;
+		if (m = statusConds[curr].match(/^もうどく(\d+)/)) {
+			var d = Math.floor(Math.min(Number(m[1]), 15) / 16 * my.hp);
+			myHps[curr] -= d;
+			history.push(my.name+"がもうどくで"+d);
+			statusConds[curr] = "もうどく" + (Number(m[1]) + 1);
+		} else if (my.item == "どくどくだま") {
+			statusConds[curr] = "もうどく1";
+		}
 		var ret = winnable();
 		stackPop();
 		return ret;
+	}
+
+	function foeMaxWaza(my, foe) {
+		var dmg = 0;
+		var waza;
+		foe.waza.forEach(function (wn) {
+			var w = waza_fromname[wn];
+			var d = calcDamage(foe, my, w, {max: true});
+			if (dmg < d) {
+				dmg = d;
+				waza = w;
+			}
+		});
+		return [dmg, waza];
 	}
 }
 
