@@ -21,18 +21,16 @@
     <ClCompile Include="factory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lcg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="factory-data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="data1.html" />
-    <None Include="data2.html" />
-    <None Include="data3.html" />
-    <None Include="data4.html" />
-    <None Include="factory-search.html" />
-    <None Include="factory-search2.html" />
+    <ClInclude Include="lcg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

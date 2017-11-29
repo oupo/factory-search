@@ -101,17 +101,11 @@
   <ItemGroup>
     <ClCompile Include="factory.cpp" />
     <ClCompile Include="factory-data.cpp" />
+    <ClCompile Include="lcg.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="factory-data.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="data1.html" />
-    <None Include="data2.html" />
-    <None Include="data3.html" />
-    <None Include="data4.html" />
-    <None Include="factory-search.html" />
-    <None Include="factory-search2.html" />
+    <ClInclude Include="lcg.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
