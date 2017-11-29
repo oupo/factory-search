@@ -1,35 +1,14 @@
 #include <iostream>
 #include <array>
 #include <vector>
-#include <sstream>
-#include <iomanip>
+#include <algorithm>
 #include "lcg.h"
 #include "factory-data.h"
+#include "factory.h"
+#include "utils.h"
 
 using namespace std;
 
-template <typename T>
-std::vector<T> operator+(const std::vector<T> &A, const std::vector<T> &B)
-{
-	std::vector<T> AB;
-	AB.reserve(A.size() + B.size());                // preallocate memory
-	AB.insert(AB.end(), A.begin(), A.end());        // add A;
-	AB.insert(AB.end(), B.begin(), B.end());        // add B;
-	return AB;
-}
-
-template <typename T>
-std::vector<T> &operator+=(std::vector<T> &A, const std::vector<T> &B)
-{
-	A.reserve(A.size() + B.size());                // preallocate memory without erase original data
-	A.insert(A.end(), B.begin(), B.end());         // add B;
-	return A;                                        // here A could be named AB
-}
-
-template<typename Container>
-bool exist_in(const Container& c, const typename Container::value_type& v) {
-	return (c.end() != std::find(c.begin(), c.end(), v));
-}
 
 int calc_status_hp(int lv, int base, int individual, int effort) {
 	return ((base * 2 + (effort / 4) + individual) * lv / 100) + lv + 10;
@@ -38,14 +17,6 @@ int calc_status_hp(int lv, int base, int individual, int effort) {
 int calc_status(int lv, int base, int individual, int effort, int nature_revision) {
 	return ((((base * 2 + (effort / 4) + individual) * lv / 100) + 5) * nature_revision / 10);
 }
-
-struct RankObject {
-    bool is_open_level;
-    int rank;
-    int range_min;
-    int range_max;
-    int iv;
-};
 
 array<int, 6> get_status(const RankObject &rank, Entry entry) {
 	int lv = rank.is_open_level ? 100 : 50;
@@ -272,14 +243,6 @@ vector<int> rand_trainers(LCG &lcg, int shuu, bool is_hgss) {
 	return trainers;
 }
 
-
-
-vector<Entry> rand_enemy_poke(LCG &lcg, RankObject &rank, vector<Entry> seen) {
-	vector<Entry> entries = rand_entries(lcg, rank, 3, seen);
-	vector<uint32_t> pids = rand_pid(lcg, entries);
-	return entries;
-}
-
 void rand_gap(LCG &lcg, int shuu, int nth, RankObject &enemy_rank) {
 	int c;
 	if (shuu >= 5) {
@@ -297,13 +260,55 @@ void rand_gap(LCG &lcg, int shuu, int nth, RankObject &enemy_rank) {
 	lcg.step(c);
 }
 
-string tohex(uint32_t x) {
-	ostringstream ostr;
-	ostr << hex << setfill('0') << setw(8) << x;
-	return ostr.str();
+Poke gen_poke(RankObject &rank, Entry entry, int ability_index) {
+	array<int, 6> status = get_status(rank, entry);
+	return make_shared<PokeStruct>(PokeStruct{
+		entry,
+		rank.is_open_level ? 100 : 50,
+		status[0],
+		status[1],
+		status[2],
+		status[3],
+		status[4],
+		status[5],
+		entry->itemNo,
+		ability_index == 0 ? entry->pokemon()->ability1 : entry->pokemon()->ability2,
+		entry->pokemon()->type1,
+		entry->pokemon()->type2,
+	});
 }
 
-int main() {
+vector<Poke> starter_entiries_to_poke(bool is_open_level, int shuu, int num_bonus, vector<Entry> entries, vector<uint32_t> pids) {
+	vector<Poke> pokes;
+	int i;
+	for (i = 0; i < 6 - num_bonus; i++) {
+		pokes.push_back(gen_poke(starter_rank(is_open_level, shuu), entries[i], pids[i] % 2));
+	}
+	for (; i < 6; i++) {
+		pokes.push_back(gen_poke(starter_rank(is_open_level, shuu + 1), entries[i], pids[i] % 2));
+	}
+	return pokes;
+}
+
+
+vector<Poke> rand_enemy_poke(LCG &lcg, RankObject &rank, vector<Entry> seen) {
+	vector<Entry> entries = rand_entries(lcg, rank, 3, seen);
+	vector<uint32_t> pids = rand_pid(lcg, entries);
+	vector<Poke> pokes;
+	for (int i = 0; i < 3; i++) {
+		pokes.push_back(gen_poke(rank, entries[i], pids[i] % 2));
+	}
+	return pokes;
+}
+
+#include <map>
+
+int factory_main() {
+	map<int, int> hoge = { {1,100}, {3, 300} };
+	cout << (hoge.find(2) != hoge.end()) << endl;
+	cout << hoge[2] << endl;
+	return 0;
+
 	LCG lcg(0);
 	int shuu = 1;
 	bool is_hgss = false;
@@ -312,6 +317,7 @@ int main() {
 	vector<int> trainers = rand_trainers(lcg, shuu, is_hgss);
 	vector<Entry> starterEntries = rand_starter_entries(lcg, is_open, shuu, num_bonus);
 	vector<uint32_t> pids = rand_pid(lcg, starterEntries);
+	vector <Poke> starters = starter_entiries_to_poke(is_open, shuu, num_bonus, starterEntries, pids);
 	lcg.step(2);
 
 	vector<Entry> playerEntries = { starterEntries[0], starterEntries[1], starterEntries[2] };
@@ -325,11 +331,12 @@ int main() {
 		cout << i << "戦目:" << endl;
 		RankObject rank = trainer_id_to_rank(is_open, is_hgss, trainers[i - 1]);
 		vector<Entry> seen = i == 1 ? starterEntries : playerEntries + prev;
-		vector<Entry> entries = rand_enemy_poke(lcg, rank, seen);
+		vector<Poke> enemyPokes = rand_enemy_poke(lcg, rank, seen);
+		vector<Entry> enemyEntries = apply(enemyPokes, [](Poke poke) { return poke->entry; });
 		rand_gap(lcg, shuu, i, rank);
-		prev = entries;
+		prev = enemyEntries;
 		for (int i = 0; i < 3; i++) {
-			cout << entries[i]->pokemon()->name << endl;
+			cout << enemyPokes[i]->entry->pokemon()->name << endl;
 		}
 	}
 	return 0;

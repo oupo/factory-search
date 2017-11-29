@@ -24,12 +24,24 @@
     <ClCompile Include="lcg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="damage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="factory-data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="lcg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="factory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="damage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,3 +1,8 @@
+#pragma once
+#include <memory>
+
+using namespace std;
+
 struct PokemonSpecStruct;
 struct WazaStruct;
 struct EntryStruct;
@@ -53,6 +58,48 @@ struct EntryStruct {
 	int no() const {
 		return this - ENTRIES;
 	}
+
+	Waza getWaza(int i) const {
+		return &WAZA[this->waza[i]];
+	}
+};
+
+struct PokeStruct {
+	Entry entry;
+	int level;
+	int hp;
+	int atk;
+	int def;
+	int	spAtk;
+	int spDef;
+	int speed;
+	int item;
+	int ability;
+	int type1;
+	int type2;
+};
+
+typedef shared_ptr<PokeStruct> Poke;
+
+enum {
+TYPE_ノーマル = 0,
+TYPE_かくとう,
+TYPE_ひこう,
+TYPE_どく,
+TYPE_じめん,
+TYPE_いわ,
+TYPE_むし,
+TYPE_ゴ－スト,
+TYPE_はがね,
+TYPE_？？？,
+TYPE_ほのお,
+TYPE_みず,
+TYPE_くさ,
+TYPE_でんき,
+TYPE_エスパ－,
+TYPE_こおり,
+TYPE_ドラゴン,
+TYPE_あく,
 };
 
 enum {

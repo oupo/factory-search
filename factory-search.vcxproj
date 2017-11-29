@@ -99,13 +99,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="damage.cpp" />
     <ClCompile Include="factory.cpp" />
     <ClCompile Include="factory-data.cpp" />
     <ClCompile Include="lcg.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="damage.h" />
     <ClInclude Include="factory-data.h" />
+    <ClInclude Include="factory.h" />
     <ClInclude Include="lcg.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
