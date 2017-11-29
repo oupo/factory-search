@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
@@ -16,8 +16,8 @@ $(function () {
 	});
 });
 
-function main_search_seed(judge_seed) {
-	var i = 0x27000000;
+function main_search_seed(judge_seed, start) {
+	var i = start || 0;
 	function loop() {
 		document.title = hex(i);
 		while (true) {
@@ -190,6 +190,7 @@ function judge_seed_lv50_shuu2(seed, dbg) {
 				var pokes = rand_enemy_poke(l, rank, seen.map(function(x){return x.entry}));
 
 				var ret = completely_winnable(playerPokes, pokes, ng_abilities, i == 7, nodbg);
+
 				if (!ret) {
 					break;
 				}
@@ -253,8 +254,8 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 	// 交換する場合にされたら困る技
 	var ng_waza2 = ["りゅうのまい", "トリックルーム", "めいそう", "のろい", "ひかりのかべ", "リフレクター", "かげぶんしん", "ちいさくなる"];
 	// 道連れする場合にされたら困る技のコード
-	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "あられ", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ"].map(function(x){return waza_fromname[x].effectCode;});
-	
+	var ng_waza3_code = ["さいみんじゅつ", "どくばり", "ほのおのパンチ", "れいとうパンチ", "かみなりパンチ", "ふきとばし", "どくどく", "ひかりのかべ", "トライアタック", "ほのおのうず", "あやしいひかり", "こうそくいどう", "こわいかお", "リフレクター", "でんじは", "こごえるかぜ", "ばくれつパンチ", "みがわり", "やどりぎのタネ", "かなしばり", "アンコール", "うらみ", "でんこうせっか", "まきびし", "ほろびのうた", "すなあらし", "いばる", "メロメロ", "バトンタッチ", "げんしのちから", "みらいよち", "かみなり", "あられ", "いちゃもん", "おにび", "ちょうはつ", "トリック", "あくび", "ブレイズキック", "どくどくのキバ", "ポイズンテール", "りゅうのまい", "つぼをつく", "とんぼがえり", "どくびし", "フレアドライブ", "トリックルーム", "うずしお", "ステルスロック", "ほのおのキバ", "こおりのキバ", "かみなりのキバ", "のしかかり"].map(function(x){return waza_fromname[x].effectCode;});
+
 	if (foes.some(function(x) { return ng_items.indexOf(x.item) >= 0 })) {
 		return false;
 	}
@@ -354,13 +355,10 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		// たたかう場合
 		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
 			// 素早さ負ける→落ちて次のポケモンへ
-			stackPush();
-			myHps[curr] = 0;
-			var ret = winnable();
-			stackPop();
+			var ret = action(true);
 			if (ret) return ret;
 		} else {
-			var ret = action();
+			var ret = action(false);
 			if (ret) return ret;
 		}
 		if (!allowExchange) return false;
@@ -374,10 +372,13 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		for (var i = 0; i < change.length; i ++) {
 			var c = change[i];
 			stackPush();
-			if (mys[c].item == "きあいのタスキ" && myHps[c] == mys[c].hp && foe.waza.every(function(w){return ng_waza3_code.indexOf(waza_fromname[w].effectCode) < 0})) {
+			var [d, w] = foeMaxWaza(my, foe);
+			if (mys[c].item == "きあいのタスキ" && myHps[c] == mys[c].hp && myHps[c] <= d && foe.waza.every((w) => ng_waza3_code.indexOf(waza_fromname[w].effectCode) < 0)) {
 				myHps[c] = 1;
-			} else {
+			} else if (foe.waza.some((w) => ng_waza3_code.indexOf(waza_fromname[w].effectCode) >= 0)) {
 				myHps[c] = 0;
+			} else {
+				myHps[c] -= d;
 			}
 			curr = change[i];
 			fixedWaza = null, atkMod = 0;
@@ -389,13 +390,18 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		return false;
 	}
 
-	function action() {
+	function action(speedLoss) {
 		var my = mys[curr];
 		var foe = foes[foeCurr];
+		if (foe.waza.some((w) => ng_waza3_code.indexOf(waza_fromname[w].effectCode) >= 0)) {
+			myDmg2 = myHps[curr];
+		} else {
+			var [myDmg2, foeWaza] = foeMaxWaza(my, foe);
+		}
 		// 敵が先制攻撃技持ち
 		var senseiWaza = foe.waza.find(function(w){return waza_fromname[w].priority == 1});
 		var myDmg = 0;
-		if (senseiWaza) {
+		if (!speedLoss && senseiWaza) {
 			myDmg = calcDamage(foe, my, waza_fromname[senseiWaza], {max: true});
 			if (myHps[curr] <= myDmg) {
 				stackPush();
@@ -405,7 +411,7 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 				return r;
 			}
 		}
-		if (my.waza.indexOf("みちづれ") >= 0 && foe.waza.every(function(w){return ng_waza3_code.indexOf(waza_fromname[w].effectCode) < 0})) {
+		if (!speedLoss && my.waza.indexOf("みちづれ") >= 0 && foe.waza.every(function(w){return ng_waza3_code.indexOf(waza_fromname[w].effectCode) < 0})) {
 			stackPush();
 			myHps[curr] = 0;
 			foeHps[foeCurr] = 0;
@@ -438,16 +444,26 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		if (!waza) {
 			return false;
 		}
+		stackPush();
+		if (speedLoss) {
+			myHps[curr] -= myDmg2;
+			if (myHps[curr] <= 0) {
+				var r = winnable();
+				stackPop();
+				return r;
+			}
+		}
 		var newHp = Math.max(foeHps[foeCurr] - dmg, 0);
 		// 攻撃したときダメな特性だったら失敗とする
 		if (ng_abilities[curr].indexOf(foe.ability) >= 0) {
+			stackPop();
 			return false;
 		}
 		// 相手のHPが残っていて積み技などを持っていた場合失敗
 		if (newHp > 0 && foe.waza.some(function(x) { return ng_waza2.indexOf(x) >= 0 })) {
+			stackPop();
 			return false;
 		}
-		stackPush();
 		myHps[curr] -= myDmg;
 		if (waza.name == "ブレイブバード") {
 			myHps[curr] -= int(dmg/3);
@@ -457,8 +473,6 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		}
 		foeHps[foeCurr] = newHp;
 		if (newHp > 0) { // 相手のHPが残っている
-			// TODO: 変な技を持っていたらHPを0にする
-			var [myDmg2, foeWaza] = foeMaxWaza(my, foe);
 			myHps[curr] -= myDmg2;
 		}
 		if (senseiWaza) {
@@ -466,8 +480,15 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		}
 		history.push(my.name+"で"+foe.name+"に"+waza.name+"("+dmg+")");
 		if (foeWaza) {
-			history.push(foe.name+"が"+my.name+"に"+foeWaza.name+"("+myDmg2+")");
+			history.push(my.name+"が"+foe.name+"に"+foeWaza.name+"("+myDmg2+")");
 		}
+		doStatus(my);
+		var ret = winnable();
+		stackPop();
+		return ret;
+	}
+
+	function doStatus(my) {
 		var m;
 		if (m = statusConds[curr].match(/^もうどく(\d+)/)) {
 			var d = Math.floor(Math.min(Number(m[1]), 15) / 16 * my.hp);
@@ -477,9 +498,6 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg) {
 		} else if (my.item == "どくどくだま") {
 			statusConds[curr] = "もうどく1";
 		}
-		var ret = winnable();
-		stackPop();
-		return ret;
 	}
 
 	function foeMaxWaza(my, foe) {
