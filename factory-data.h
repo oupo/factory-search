@@ -1,35 +1,59 @@
-struct PokemonSpec {
+struct PokemonSpecStruct;
+struct WazaStruct;
+struct EntryStruct;
+
+extern const int NATURE_TABLE[25][5];
+extern const char *TYPE_NAME[18];
+extern const double TYPE_CHART[18][18];
+extern const PokemonSpecStruct POKEMON_SPEC[494];
+extern const WazaStruct WAZA[468];
+extern const EntryStruct ENTRIES[951];
+
+typedef const PokemonSpecStruct *PokemonSpec;
+typedef const WazaStruct *Waza;
+typedef const EntryStruct *Entry;
+
+struct PokemonSpecStruct {
 	char name[40];
 	int stats[6];
 	int ability1;
 	int ability2;
 	int type1;
 	int type2;
+
+	int no() const {
+		return this - POKEMON_SPEC;
+	}
 };
 
-struct Waza {
+struct WazaStruct {
 	char name[40];
 	int power;
 	int accuracy;
 	int effectCode;
 	int type;
 	int isPhysical;
+
+	int no() const {
+		return this - WAZA;
+	}
 };
 
-struct Entry {
+struct EntryStruct {
 	int pokemonNo;
 	int itemNo;
 	int waza[4];
 	int nature;
 	int effort[6];
-};
 
-extern const int NATURE_TABLE[25][5];
-extern const char *TYPE_NAME[18];
-extern const double TYPE_CHART[18][18];
-extern const PokemonSpec POKEMON_SPEC[494];
-extern const Waza WAZA[468];
-extern const Entry ENTRIES[951];
+	PokemonSpec pokemon() const {
+		return &POKEMON_SPEC[this->pokemonNo];
+	}
+
+	int no() const {
+		return this - ENTRIES;
+	}
+};
 
 enum {
 ITEM_マスターボール = 1,
