@@ -27,6 +27,15 @@ inline bool exist_in(const Container& c, const typename Container::value_type& v
 	return (c.end() != std::find(c.begin(), c.end(), v));
 }
 
+template<typename Container>
+inline int indexof(const Container& c, const typename Container::value_type& v) {
+	size_t index = std::distance(c.begin(), std::find(c.begin(), c.end(), v));
+	if (index == c.size()) {
+		return -1;
+	}
+	return index;
+}
+
 template <class Container, class Function>
 inline auto apply(const Container &cont, Function fun) {
 	std::vector< typename
