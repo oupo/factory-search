@@ -7,6 +7,22 @@
 #include "utils.h"
 #include "factory.h"
 
+int foeMaxWaza(Poke my, Poke foe) {
+	int dmg = 0;
+	for (int i = 0; i < 4; i ++) {
+		Waza waza = &WAZA[foe->entry->waza[i]];
+		int d = calcDamage(foe, my, waza, true, false, 0);
+		if (dmg < d) {
+			dmg = d;
+		}
+	}
+	return dmg;
+}
+
+vector<Waza> get_wazas(Poke p) {
+	return apply(vector<int>({ 0,1,2,3 }), [&](int i) { return p->entry->getWaza(i); });
+}
+
 const set<int> NG_ITEMS = { ITEM_せんせいのツメ };
 const set<int> NG_WAZA = { WAZA_こらえる };
 const set<int> NG_WAZA2 = { WAZA_りゅうのまい, WAZA_トリックルーム, WAZA_めいそう, WAZA_のろい, WAZA_ひかりのかべ, WAZA_リフレクター, WAZA_かげぶんしん, WAZA_ちいさくなる };
@@ -17,6 +33,11 @@ struct StatusCond {
 	int turn; // もうどくターン
 };
 
+enum {
+	STATUSCOND_NONE,
+	STATUSCOND_POISON,
+};
+
 struct StackElem {
 	vector<int> myHps;
 	vector<StatusCond>	statusConds;
@@ -25,6 +46,7 @@ struct StackElem {
 	int foeCurr;
 	Waza fixedWaza;
 	bool justAfterFoeExchanged;
+	bool justAfterMyExchanged;
 	int atkMod;
 };
 
@@ -44,11 +66,12 @@ bool completely_winnable(vector<Poke> mys, vector<Poke> foes, bool allowExchange
 	int foeCurr = 0;
 	Waza fixedWaza = 0;
 	bool justAfterFoeExchanged = true;
+	bool justAfterMyExchanged = false;
 	int atkMod = 0;
-	stack<StackElem> st;
+	stack<StackElem> stack;
 
 	auto stackPush = [&]() {
-		st.push(StackElem{
+		stack.push(StackElem{
 			myHps,
 			statusConds,
 			curr,
@@ -56,11 +79,12 @@ bool completely_winnable(vector<Poke> mys, vector<Poke> foes, bool allowExchange
 			foeCurr,
 			fixedWaza,
 			justAfterFoeExchanged,
+			justAfterMyExchanged,
 			atkMod,
 		});
 	};
 	auto stackPop = [&]() {
-		StackElem popped = st.top();
+		StackElem popped = stack.top();
 		myHps = popped.myHps;
 		statusConds = popped.statusConds;
 		curr =  popped.curr;
@@ -68,34 +92,221 @@ bool completely_winnable(vector<Poke> mys, vector<Poke> foes, bool allowExchange
 		foeCurr = popped.foeCurr;
 		fixedWaza = popped.fixedWaza;
 		justAfterFoeExchanged = popped.justAfterFoeExchanged;
+		justAfterMyExchanged = popped.justAfterMyExchanged;
 		atkMod = popped.atkMod;
-		st.pop();
+		stack.pop();
 	};
-	function<void()> winnable = [&]() {
-		winnable();
+	function<bool(bool)> action;
+	function<bool()> winnable;
+	action = [&](bool speedLoss) {
+		Poke my = mys[curr];
+		Poke foe = foes[foeCurr];
+		int myDmg2;
+		if (any_of(foe->entry->waza, foe->entry->waza + 4, [](int waza) { return exist_in(NG_WAZA3_CODE, WAZA[waza].effectCode); })) {
+			myDmg2 = myHps[curr];
+		}
+		else {
+			myDmg2 = foeMaxWaza(my, foe);
+		}
+		// 敵が先制攻撃技持ち
+		vector<Waza> foeWazas = get_wazas(foe);
+		auto senseiWazaIt = find_if(foeWazas.begin(), foeWazas.end(), [](Waza w) { return w->effectCode == 103; });
+		Waza senseiWaza = senseiWazaIt != foeWazas.end() ? *senseiWazaIt : 0;
+		int myDmg = 0;
+		if (!speedLoss && senseiWaza) {
+			myDmg = calcDamage(foe, my, senseiWaza, true, false, 0);
+			if (myHps[curr] <= myDmg) {
+				stackPush();		
+				myHps[curr] -= myDmg;
+				justAfterMyExchanged = false;
+				bool r = winnable();
+				stackPop();
+				return r;
+			}
+		}
+		if (!speedLoss && exist_in(get_wazas(my), &WAZA[WAZA_みちづれ]) && !any_of(foe->entry->waza, foe->entry->waza + 4, [](int waza) { return exist_in(NG_WAZA3_CODE, WAZA[waza].effectCode); })) {
+			stackPush();
+			myHps[curr] = 0;
+			foeHps[foeCurr] = 0;
+			justAfterFoeExchanged = false;
+			justAfterMyExchanged = false;
+			bool r = winnable();
+			stackPop();
+			if (r) {
+				return r;
+			}
+		}
+		int dmg = 0;
+		Waza waza = 0;
+		if (fixedWaza) {
+			waza = fixedWaza;
+			dmg = calcDamage(my, foe, waza, false, statusConds[curr].cond != 0, atkMod);
+		}
+		else {
+			// 一番ダメージの与えられる技を選択
+			for (Waza w : get_wazas(my)) {
+				if (w->no() != WAZA_とんぼがえり) {
+					int d = min(calcDamage(my, foe, w, false, statusConds[curr].cond != 0, atkMod), foeHps[foeCurr]);
+					if (dmg < d) {
+						dmg = d;
+						waza = w;
+					}
+				}
+			}
+		}
+		if (!waza) {
+			return false;
+		}
+		stackPush();
+		justAfterFoeExchanged = false;
+		justAfterMyExchanged = false;
+		if (speedLoss) {
+			myHps[curr] -= myDmg2;
+			if (myHps[curr] <= 0) {
+				bool r = winnable();
+				stackPop();
+				return r;
+			}
+		}
+		int newHp = max(foeHps[foeCurr] - dmg, 0);
+		if (foe->ability == ABIL_ゆうばく || (waza->isPhysical && foe->ability == ABIL_ほうし)) {
+			stackPop();
+			return false;
+		}
+		// 相手のHPが残っていて積み技などを持っていた場合失敗
+		if (newHp > 0 && any_of(foe->entry->waza, foe->entry->waza + 4, [](int waza) { return exist_in(NG_WAZA2, waza); })) {
+			stackPop();
+			return false;
+		}
+		myHps[curr] -= myDmg;
+		if (waza->no() == WAZA_ブレイブバード) {
+			myHps[curr] -= dmg / 3;
+		}
+		if (my->item == ITEM_こだわりハチマキ) {
+			fixedWaza = waza;
+		}
+		foeHps[foeCurr] = newHp;
+		if (newHp > 0) { // 相手のHPが残っている
+			myHps[curr] -= myDmg2;
+		}
+		if (statusConds[curr].cond == STATUSCOND_POISON) {
+			int d = my->hp * min(statusConds[curr].turn, 15) / 16;
+			myHps[curr] -= d;
+			statusConds[curr].turn ++;
+		}
+		else if (my->item == ITEM_どくどくだま) {
+			statusConds[curr].cond = STATUSCOND_POISON;
+			statusConds[curr].turn = 1;
+		}
+		bool ret = winnable();
+		stackPop();
+		return ret;
 	};
-	return true;
+	winnable = [&]() {
+		if (stack.size() >= 15) {
+			return false;
+		}
+		Poke my = mys[curr];
+		Poke foe = foes[foeCurr];
+		//cout << my->entry->pokemon()->name << " " << foe->entry->pokemon()->name << endl;
+		if (all_of(myHps.begin(), myHps.end(), [](int hp) { return hp <= 0; })) {
+			return false; // 負け
+		}
+		if (all_of(foeHps.begin(), foeHps.end(), [](int hp) { return hp <= 0; })) {
+			return true; // 勝ち
+		}
+		// 現在HPが0→交換	
+		if (myHps[curr] <= 0) {
+			vector<int> change = filter<int>(vector<int>({0, 1, 2}), [&](auto x) { return myHps[x] > 0; });
+			for (int i : change) {
+				stackPush();
+				curr = i, fixedWaza = 0, atkMod = 0;
+				justAfterMyExchanged = false;
+				bool r = winnable();
+				stackPop();
+				if (r) return r;
+			}
+			return false;
+		}
+		if (foeHps[foeCurr] <= 0) {
+			vector<int> change = filter<int>(vector<int>({ 0, 1, 2 }), [&](auto x) { return foeHps[x] > 0; });
+			for (int i : change) {
+				stackPush();
+				foeCurr = i;
+				justAfterFoeExchanged = true;
+				bool r = winnable();
+				stackPop();
+				if (!r) return false;
+			}
+			return true;
+		}
+		if (justAfterFoeExchanged && (foe->ability == ABIL_いかく || (my->ability == ABIL_いかく && foe->ability == ABIL_トレ－ス))) {
+			atkMod -= 1;
+		}
+		// たたかう場合
+		if (calcComputedSpeed(my) <= calcComputedSpeed(foe)) {
+			// 素早さ負ける
+			bool ret = action(true);
+			if (ret) return ret;
+		}
+		else {
+			bool ret = action(false);
+			if (ret) return ret;
+		}
+		// 交換する場合
+		if (justAfterMyExchanged) {
+			return false;
+		}
+
+		// 相手が積み技などを持っていた場合
+		if (any_of(foe->entry->waza, foe->entry->waza + 4, [](int waza) { return exist_in(NG_WAZA2, waza); })) {
+			return false;
+		}
+		vector<int> change = filter<int>(vector<int>({0, 1, 2}), [&](int x) { return myHps[x] > 0 && x != curr; });
+		for (int c : change) {
+			stackPush();
+			int d = foeMaxWaza(my, foe);
+			bool hasNgWaza = any_of(foe->entry->waza, foe->entry->waza + 4, [](int waza) { return exist_in(NG_WAZA3_CODE, WAZA[waza].effectCode); });
+			if (mys[c]->item == ITEM_きあいのタスキ && myHps[c] == mys[c]->hp && myHps[c] <= d && !hasNgWaza) {
+				myHps[c] = 1;
+			}	
+			else if (hasNgWaza) {
+				myHps[c] = 0;
+			}
+			else {
+				myHps[c] -= d;
+			}
+			curr = c;
+			fixedWaza = 0, atkMod = 0;
+			justAfterMyExchanged = true;
+			bool ret = winnable();
+			stackPop();
+			if (ret) return ret;
+		}
+		return false;
+	};
+	return winnable();
 }
 
-void judge_seed(uint32_t seed) {
+int judge_seed(uint32_t seed) {
 	LCG lcg(seed);
-	int shuu = 2;
+	int shuu = 3;
 	bool is_open_level = false;
 	bool is_hgss = false;
 	int num_bonus = 1;
 	vector<int> trainers = rand_trainers(lcg, shuu, is_hgss);
 	vector<Entry> entries = rand_starter_entries(lcg, is_open_level, shuu, num_bonus);
 	int suba_idx = indexof(apply(entries, [](Entry e) { return e->no(); }), 289);
-	if (suba_idx < 0) return;
+	if (suba_idx < 0) return 0;
 	vector<Poke> starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
 	Poke suba = starters[suba_idx];
 	lcg.step(2); // shuffle
 
 	LCG l(lcg.seed);
-	int idx = suba == 0 ? 1 : 0;
+	int idx = suba_idx == 0 ? 1 : 0;
 	int idx2 = 5; // ボーナスポケをとる
 
-	vector<Poke> playerPokes = { starters[suba_idx], starters[idx], starters[idx2] };
+	vector<Poke> playerPokes = { starters[idx2], starters[suba_idx], starters[idx] };
 
 	vector<Poke> prev;
 	int i;
@@ -104,25 +315,29 @@ void judge_seed(uint32_t seed) {
 		RankObject rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i - 1]);
 		vector<Poke> pokes = rand_enemy_poke(l, rank, seen);
 
-		if (!completely_winnable(playerPokes, pokes, true)) {
+		bool win = completely_winnable(playerPokes, pokes, true);
+		cout << tohex(seed) << ": " << win << endl;
+		if (!win) {
 			break;
 		}
 		prev = pokes;
 		rand_gap(l, shuu, i, rank);
 	}
 	if (i - 1 >= 1) {
-		cout << tohex(seed) << endl;
+		return 2;
+		//cout << tohex(seed) << endl;
 	}
-	
+	return 1;
 }
 
 int main() {
 	int count = 0;
-	auto hoge = [&]() {
-		return count ++;
-	};
-	for (uint64_t i = 0; i < (1ull << 32); i++) {
-		judge_seed(i);
+	int count_succeed = 0;
+	for (uint64_t i = 0; i < 10000; i++) {
+		int judged = judge_seed(i);
+		if (judged > 0) count ++;
+		if (judged == 2) count_succeed ++;
 	}
+	cout << count_succeed << " / " << count << endl;
 }
 

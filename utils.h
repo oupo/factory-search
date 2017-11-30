@@ -1,8 +1,18 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <functional>
 #include <sstream>
 #include <iomanip>
+
+
+template<typename T>
+inline vector<T> filter(vector<T> inVec, function<bool(const T&)> predicate)
+{
+	vector<T> result;
+	copy_if(inVec.begin(), inVec.end(), back_inserter(result), predicate);
+	return result;
+}
 
 template <typename T>
 inline std::vector<T> operator+(const std::vector<T> &A, const std::vector<T> &B)
