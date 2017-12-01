@@ -153,7 +153,7 @@ int calcDamage0(int level, int basePower, int atk, int def, double mod1, double 
 	return x5;
 }
 
-int calcDamage(Poke userPoke, Poke foePoke, Waza waza, bool tomax, bool hasStatusCondition, int atkMod) {
+int calcDamage(Poke userPoke, Poke foePoke, Waza waza, bool tomax, bool hasStatusCondition, int atkMod, bool considerCritical) {
 	if (waza->effectCode == 87) {
 		return userPoke->level; // ナイトヘッドとちちゅうなげ
 	}
@@ -173,9 +173,11 @@ int calcDamage(Poke userPoke, Poke foePoke, Waza waza, bool tomax, bool hasStatu
 	int r = 85; // 最小乱数
 
 	if (tomax) {
-		ch = 2;
 		r = 100;
-		if (userPoke->ability == ABIL_スナイパ－) ch = 3;
+		if (considerCritical) {
+			ch = 2;
+			if (userPoke->ability == ABIL_スナイパ－) ch = 3;
+		}
 	}
 	double type1 = TYPE_CHART[waza->type][foePoke->type1];
 	double type2 = foePoke->type1 == foePoke->type2 ? 1 : TYPE_CHART[waza->type][foePoke->type2];
@@ -212,6 +214,6 @@ int calcDamage(Poke userPoke, Poke foePoke, Waza waza, bool tomax, bool hasStatu
 int damage_main() {
 	Poke poke1 = gen_poke(starter_rank(false, 1), &ENTRIES[1], 0);
 	Poke poke2 = gen_poke(starter_rank(false, 1), &ENTRIES[2], 0);
-	cout << calcDamage(poke1, poke2, poke1->entry->getWaza(0), false, false) << endl;
+	cout << calcDamage(poke1, poke2, poke1->entry->getWaza(0), false, false, 0, false) << endl;
 	return 0;
 }
