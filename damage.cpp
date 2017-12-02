@@ -1,22 +1,30 @@
 #include <map>
 #include <iostream>
+#include <random>
 #include "damage.h"
 #include "utils.h"
 #include "factory.h"
 
 // ref: http://www.smogon.com/dp/articles/damage_formula
 
-int calcComputedSpeed(Poke poke) {
+const double SM_multiplier[] = { 2. / 8, 2. / 7, 2. / 6, 2. / 5, 2. / 4, 2. / 3, 2. / 2, 3. / 2, 4. / 2, 5. / 2, 6. / 2, 7. / 2, 8. / 2 };
+
+int calcComputedSpeed(PokeStruct * poke) {
+	int speed = poke->speed;
+	speed *= SM_multiplier[poke->speedMod + 6];
+	if (poke->statusCond == STATUSCOND_PARALYSIS) {
+		speed *= 0.25;
+	}
 	if (poke->item == ITEM_こだわりスカーフ) {
-		return poke->speed * 1.5;
+		speed *= 1.5;
 	}
 	if (poke->item == ITEM_くろいてっきゅう) {
-		return poke->speed * 0.5;
+		speed *= 0.5;
 	}
-	return poke->speed;
+	return speed;
 }
 
-bool isToZero(Poke userPoke, Poke foePoke, Waza waza) {
+bool isToZero(PokeStruct * userPoke, PokeStruct * foePoke, Waza waza) {
 	if (waza->type == TYPE_みず && (foePoke->ability == ABIL_ちょすい || foePoke->ability == ABIL_かんそうはだ))
 		return true;
 	if (waza->type == TYPE_じめん && foePoke->ability == ABIL_ふゆう)
@@ -29,7 +37,7 @@ bool isToZero(Poke userPoke, Poke foePoke, Waza waza) {
 	return false;
 }
 
-double calcMod2(Poke userPoke) {
+double calcMod2(PokeStruct * userPoke) {
 	// ignore メトロノーム、さきどり
 	if (userPoke->item == ITEM_いのちのたま) {
 		return 1.3;
@@ -58,7 +66,7 @@ map<int, int> BERRY_MAP = {
 };
 
 
-double calcMod3(Poke userPoke, Poke foePoke, Waza waza, bool effective) {
+double calcMod3(PokeStruct *userPoke, PokeStruct * foePoke, Waza waza, bool effective) {
 	// ignore いろめがね(効果今ひとつの技が倍になる), ホズのみ(ノーマルタイプ半減)
 	double mod3 = 1;
 	if (foePoke->ability == ABIL_ハ－ドロック && effective) {
@@ -74,9 +82,12 @@ double calcMod3(Poke userPoke, Poke foePoke, Waza waza, bool effective) {
 	return mod3;
 }
 
-int calcBasePower(Poke userPoke, Poke foePoke, Waza waza, bool hasStatusCondition) {
+int calcBasePower(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza) {
 	// ignore 威力が固定でない技
 	int basePower = waza->power;
+	if (basePower == 1) {
+		throw string("unsupported waza:") + waza->name;
+	}
 
 	// ignore てだすけ(HH), じゅうでん(CHG), どろあそび(MS), みずあそび(WS)
 
@@ -102,19 +113,20 @@ int calcBasePower(Poke userPoke, Poke foePoke, Waza waza, bool hasStatusConditio
 	if (foePoke->ability == ABIL_かんそうはだ && waza->type == TYPE_ほのお) {
 		basePower = basePower * 1.25;
 	}
-	if (hasStatusCondition && waza->no() == WAZA_からげんき) {
+	if (userPoke->statusCond && waza->no() == WAZA_からげんき) {
 		basePower *= 2;
 	}
 	return basePower;
 }
 
-int calcAttack(Poke userPoke, Poke foePoke, Waza waza, int atkMod, bool hasStatusCondition) {
+int calcAttack(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza) {
 	int atk = waza->isPhysical ? userPoke->atk : userPoke->spAtk;
 
-	// 能力変化 (こうげきのみ)
-	const double SM_multiplier[] = {2. / 8, 2. / 7, 2. / 6, 2. / 5, 2. / 4, 2. / 3, 2. / 2, 3. / 2, 4. / 2, 5. / 2, 6. / 2, 7. / 2, 8. / 2};
 	if (waza->isPhysical) {
-		atk = atk * SM_multiplier[atkMod + 6];
+		atk = atk * SM_multiplier[userPoke->atkMod + 6];
+	}
+	else {
+		atk = atk * SM_multiplier[userPoke->spAtkMod + 6];
 	}
 
 	// ignore ヨガパワー ちからもち フラワーギフト こんじょう はりきり スロースタート プラス マイナス ソーラーパワー
@@ -126,17 +138,23 @@ int calcAttack(Poke userPoke, Poke foePoke, Waza waza, int atkMod, bool hasStatu
 	if (!waza->isPhysical && userPoke->item == ITEM_こだわりメガネ) {
 		atk = atk * 1.5;
 	}
-	if (waza->isPhysical && userPoke->ability == ABIL_こんじょう && hasStatusCondition) {
+	if (waza->isPhysical && userPoke->ability == ABIL_こんじょう && userPoke->statusCond) {
 		atk = atk * 1.5;
 	}
 	return atk;
 }
 
 
-int calcDefence(Poke userPoke, Poke foePoke, Waza waza) {
+int calcDefence(PokeStruct * userPoke, PokeStruct * foePoke, Waza waza) {
 	int def = waza->isPhysical ? foePoke->def : foePoke->spDef;
 
-	// ignore 能力変化
+	if (waza->isPhysical) {
+		def = def * SM_multiplier[foePoke->defMod + 6];
+	}
+	else {
+		def = def * SM_multiplier[foePoke->spDefMod + 6];
+	}
+
 	// ignore じばく だいばくはつ
 	// ignore メタルパウダー ふしぎなうろこ こころのしずく しんかいのウロコ
 	// ignore 砂嵐下での岩タイプの特防アップ フラワーギフト
@@ -153,28 +171,20 @@ int calcDamage0(int level, int basePower, int atk, int def, double mod1, double 
 	return x5;
 }
 
-int calcDamage(Poke userPoke, Poke foePoke, Waza waza, bool tomax, bool hasStatusCondition, int atkMod) {
+int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rnd) {
 	if (waza->effectCode == 87) {
-		return userPoke->level; // ナイトヘッドとちちゅうなげ
+		return userPoke->level; // ナイトヘッドとちきゅうなげ
+	}
+	if (waza->effectCode == 38) {
+		return foePoke->maxHp;
 	}
 	if (waza->power == 0) return 0;
-	if (waza->power == 1) {
-		if (tomax) {
-			return 9999;
-		}
-		else {
-			return 0;
-		}
-	}
-	if (!tomax && waza->accuracy < 100 && waza->effectCode != 17) return 0;
-	if (!tomax && (foePoke->item == ITEM_ひかりのこな || foePoke->item == ITEM_のんきのおこう)) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
-	double ch = 1; // 急所はなし
-	int r = 85; // 最小乱数
-
-	if (tomax) {
+	double ch = 1;
+	int r = 85 + rnd() % 16;
+	
+	if (rnd() % 16 == 0) {
 		ch = 2;
-		r = 100;
 		if (userPoke->ability == ABIL_スナイパ－) ch = 3;
 	}
 	double type1 = TYPE_CHART[waza->type][foePoke->type1];
@@ -197,21 +207,19 @@ int calcDamage(Poke userPoke, Poke foePoke, Waza waza, bool tomax, bool hasStatu
 	double mod2 = calcMod2(userPoke);
 	double mod3 = calcMod3(userPoke, foePoke, waza, (type1*type2) > 1);
 
-	int basePower = calcBasePower(userPoke, foePoke, waza, hasStatusCondition);
-	int atk = calcAttack(userPoke, foePoke, waza, atkMod, hasStatusCondition);
+	int basePower = calcBasePower(userPoke, foePoke, waza);
+	int atk = calcAttack(userPoke, foePoke, waza);
 	int def = calcDefence(userPoke, foePoke, waza);
 	int dmg = calcDamage0(userPoke->level, basePower, atk, def, mod1, ch, mod2, r, stab, type1, type2, mod3);
-
-	if (!tomax && (foePoke->item == ITEM_きあいのタスキ || foePoke->item == ITEM_きあいのハチマキ)) {
-		// TODO きあいのハチマキの対応はこれではだめ
-		dmg = min(dmg, foePoke->hp - 1);
-	}
 	return dmg;
 }
 
-int damage_main() {
-	Poke poke1 = gen_poke(starter_rank(false, 1), &ENTRIES[1], 0);
-	Poke poke2 = gen_poke(starter_rank(false, 1), &ENTRIES[2], 0);
-	cout << calcDamage(poke1, poke2, poke1->entry->getWaza(0), false, false) << endl;
+int main() {
+	mt19937 rnd(0);
+	PokeStruct poke1 = gen_poke(starter_rank(false, 1), &ENTRIES[1], 0);
+	PokeStruct poke2 = gen_poke(starter_rank(false, 1), &ENTRIES[2], 0);
+	for (int i = 0; i < 200; i++) {
+		cout << calcDamage(&poke1, &poke2, poke1.entry->getWaza(0), rnd) << endl;
+	}
 	return 0;
 }

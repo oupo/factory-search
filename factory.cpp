@@ -260,9 +260,9 @@ void rand_gap(LCG &lcg, int shuu, int nth, RankObject &enemy_rank) {
 	lcg.step(c);
 }
 
-Poke gen_poke(RankObject &rank, Entry entry, int ability_index) {
+PokeStruct gen_poke(RankObject &rank, Entry entry, int ability_index) {
 	array<int, 6> status = get_status(rank, entry);
-	return make_shared<PokeStruct>(PokeStruct{
+	return PokeStruct{
 		entry,
 		rank.is_open_level ? 100 : 50,
 		status[0],
@@ -275,17 +275,25 @@ Poke gen_poke(RankObject &rank, Entry entry, int ability_index) {
 		ability_index == 0 ? entry->pokemon()->ability1 : entry->pokemon()->ability2,
 		entry->pokemon()->type1,
 		entry->pokemon()->type2,
-	});
+		status[0],
+		{ entry->getWaza(0), entry->getWaza(1), entry->getWaza(2), entry->getWaza(3) },
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	};
 }
 
 vector<Poke> starter_entiries_to_poke(bool is_open_level, int shuu, int num_bonus, vector<Entry> entries, vector<uint32_t> pids) {
 	vector<Poke> pokes;
 	int i;
 	for (i = 0; i < 6 - num_bonus; i++) {
-		pokes.push_back(gen_poke(starter_rank(is_open_level, shuu), entries[i], pids[i] % 2));
+		pokes.push_back(make_shared<PokeStruct>(gen_poke(starter_rank(is_open_level, shuu), entries[i], pids[i] % 2)));
 	}
 	for (; i < 6; i++) {
-		pokes.push_back(gen_poke(starter_rank(is_open_level, shuu + 1), entries[i], pids[i] % 2));
+		pokes.push_back(make_shared<PokeStruct>(gen_poke(starter_rank(is_open_level, shuu + 1), entries[i], pids[i] % 2)));
 	}
 	return pokes;
 }
@@ -296,19 +304,12 @@ vector<Poke> rand_enemy_poke(LCG &lcg, RankObject &rank, vector<Entry> seen) {
 	vector<uint32_t> pids = rand_pid(lcg, entries);
 	vector<Poke> pokes;
 	for (int i = 0; i < 3; i++) {
-		pokes.push_back(gen_poke(rank, entries[i], pids[i] % 2));
+		pokes.push_back(make_shared<PokeStruct>(gen_poke(rank, entries[i], pids[i] % 2)));
 	}
 	return pokes;
 }
 
-#include <map>
-
 int factory_main() {
-	map<int, int> hoge = { {1,100}, {3, 300} };
-	cout << (hoge.find(2) != hoge.end()) << endl;
-	cout << hoge[2] << endl;
-	return 0;
-
 	LCG lcg(0);
 	int shuu = 1;
 	bool is_hgss = false;

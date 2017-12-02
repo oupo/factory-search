@@ -101,6 +101,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="battle.cpp" />
     <ClCompile Include="damage.cpp" />
     <ClCompile Include="factory.cpp" />
     <ClCompile Include="factory-data.cpp" />

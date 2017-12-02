@@ -64,10 +64,15 @@ struct EntryStruct {
 	}
 };
 
+enum {
+	STATUSCOND_NONE,
+	STATUSCOND_PARALYSIS,
+};
+
 struct PokeStruct {
 	Entry entry;
 	int level;
-	int hp;
+	int maxHp;
 	int atk;
 	int def;
 	int	spAtk;
@@ -77,6 +82,14 @@ struct PokeStruct {
 	int ability;
 	int type1;
 	int type2;
+	int hp;
+	Waza wazas[4];
+	int atkMod;
+	int defMod;
+	int spAtkMod;
+	int spDefMod;
+	int speedMod;
+	int statusCond;
 };
 
 typedef shared_ptr<PokeStruct> Poke;
