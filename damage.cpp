@@ -171,7 +171,7 @@ int calcDamage0(int level, int basePower, int atk, int def, double mod1, double 
 	return x5;
 }
 
-int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rnd) {
+int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, RandomValue &random) {
 	if (waza->effectCode == 87) {
 		return userPoke->level; // ナイトヘッドとちきゅうなげ
 	}
@@ -181,10 +181,9 @@ int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rn
 	if (waza->power == 0) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	double ch = 1;
-	//int r = 85 + rnd() % 16;
-	int r = 85 + rnd() % 4 * 15 / 3;
+	int r = 85 + random.damageRand * 15 / 2;
 	
-	if (rnd() % 16 == 0) {
+	if (random.critical) {
 		ch = 2;
 		if (userPoke->ability == ABIL_スナイパ－) ch = 3;
 	}
@@ -216,11 +215,5 @@ int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rn
 }
 
 int damage_main() {
-	mt19937 rnd(0);
-	PokeStruct poke1 = gen_poke(starter_rank(false, 1), &ENTRIES[1], 0);
-	PokeStruct poke2 = gen_poke(starter_rank(false, 1), &ENTRIES[2], 0);
-	for (int i = 0; i < 200; i++) {
-		cout << calcDamage(&poke1, &poke2, poke1.entry->getWaza(0), rnd) << endl;
-	}
 	return 0;
 }
