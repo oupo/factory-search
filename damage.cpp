@@ -176,12 +176,13 @@ int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rn
 		return userPoke->level; // ナイトヘッドとちきゅうなげ
 	}
 	if (waza->effectCode == 38) {
-		return foePoke->maxHp;
+		return foePoke->maxHp; // 一撃必殺技
 	}
 	if (waza->power == 0) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	double ch = 1;
-	int r = 85 + rnd() % 16;
+	//int r = 85 + rnd() % 16;
+	int r = 85 + rnd() % 4 * 15 / 3;
 	
 	if (rnd() % 16 == 0) {
 		ch = 2;
@@ -214,7 +215,7 @@ int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rn
 	return dmg;
 }
 
-int main() {
+int damage_main() {
 	mt19937 rnd(0);
 	PokeStruct poke1 = gen_poke(starter_rank(false, 1), &ENTRIES[1], 0);
 	PokeStruct poke2 = gen_poke(starter_rank(false, 1), &ENTRIES[2], 0);
