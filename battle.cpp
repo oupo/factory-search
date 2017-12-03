@@ -163,6 +163,11 @@ void MonteCarlo::run_simulation() {
 		plays[state] ++;
 		if (winner == PLAYER_ME) {
 			wins[state] ++;
+			cout << "You win" << endl;
+		} else if (winner == PLAYER_FOE) {
+			cout << "You lose" << endl;
+		} else {
+			cout << "No winner" << endl;
 		}
 	}
 }
@@ -182,6 +187,9 @@ int main() {
 		},
 		0, 0, 0,
 	};
-	monte.run_simulation();
+	for (int i = 0; i < 1000; i++) {
+		cout << i << endl;
+		monte.run_simulation();
+	}
 	return 0;
 }
