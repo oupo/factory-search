@@ -92,11 +92,6 @@ struct PokeStruct {
 	int statusCond;
 };
 
-struct RandomValue {
-	int damageRand;
-	int critical;
-};
-
 typedef shared_ptr<PokeStruct> Poke;
 
 enum {

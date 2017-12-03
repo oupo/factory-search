@@ -37,9 +37,6 @@ enum PLAYER {
 };
 
 PLAYER get_winner(State &state) {
-	if (state.turn > 10) {
-		return PLAYER_FOE;
-	}
 	if (all_of(state.myPokes, state.myPokes + 3, [](PokeStruct p) { return p.hp <= 0; })) {
 		return PLAYER_FOE;
 	}
@@ -68,7 +65,15 @@ inline std::size_t Hash::operator()(const State& key) const {
 	return std::hash<std::string>()(bytes);
 }
 
-typedef std::unordered_map<State, double, Hash> StateToDouble;
+typedef std::unordered_map<State, int, Hash> StateToInt;
+
+struct MonteCarlo {
+	State initial_state;
+	StateToInt plays;
+	StateToInt wins;
+	mt19937 rnd;
+	void run_simulation();
+};
 
 struct PokeAndPlay {
 	PLAYER player;
@@ -76,33 +81,24 @@ struct PokeAndPlay {
 	Play play;
 };
 
-struct RandomValue2 {
-	RandomValue val[2];
-	int foeMove;
-};
-
-State proceed(State state, RandomValue2 &random, Play myPlay) {
+State proceed(State state, mt19937 &rnd, Play myPlay) {
 	if (get_winner(state)) return state;
 	Play foePlay;
 	if (myPlay.type == PLAYTYPE_SINIDASI) {
 		foePlay = Play{ PLAYTYPE_DONOTHING };
 	} else if (state.foePokes[state.foeCurr].hp <= 0) {
-		vector<int> changeCandidates;
-		for (int i = 0; i < 3; i++) {
-			if (state.foePokes[i].hp > 0) changeCandidates.push_back(i);
-		}
-		foePlay = Play{ PLAYTYPE_SINIDASI, 0, changeCandidates[random.foeMove] };
+		do {
+			foePlay = Play{ PLAYTYPE_SINIDASI, 0, rnd() % 3 };
+		} while (state.foePokes[foePlay.indexChange].hp <= 0);
 	} else {
-		foePlay = Play{ PLAYTYPE_WAZA, state.foePokes[state.foeCurr].wazas[random.foeMove], -1 };
+		foePlay = Play{ PLAYTYPE_WAZA, state.foePokes[state.foeCurr].wazas[rnd() % 4], -1 };
 	}
-	if (myPlay.type == PLAYTYPE_CHANGE || myPlay.type == PLAYTYPE_SINIDASI) {
+	if (myPlay.type == PLAYTYPE_CHANGE) {
 		state.curr = myPlay.indexChange;
 	}
-	if (foePlay.type == PLAYTYPE_CHANGE || foePlay.type == PLAYTYPE_SINIDASI) {
+	if (foePlay.type == PLAYTYPE_CHANGE) {
 		state.foeCurr = foePlay.indexChange;
 	}
-	//cout << "proceed: " << myPlay.type << " " << (myPlay.waza ? myPlay.waza->name : "") << state.myPokes[state.curr].hp
-	//	 << ", " << foePlay.type << " " << (foePlay.waza ? foePlay.waza->name : "") << state.foePokes[state.curr].hp << endl;
 	PokeAndPlay pps[2] = {
 		PokeAndPlay{PLAYER_ME, &state.myPokes[state.curr], myPlay},
 		PokeAndPlay{PLAYER_FOE, &state.foePokes[state.foeCurr], foePlay}
@@ -116,7 +112,7 @@ State proceed(State state, RandomValue2 &random, Play myPlay) {
 		Play play = pps[i].play;
 		if (play.type != PLAYTYPE_WAZA) continue;
 		Waza waza = play.waza;
-		int damage = calcDamage(poke0, poke1, waza, random.val[i]);
+		int damage = calcDamage(poke0, poke1, waza, rnd);
 		poke1->hp -= damage;
 		if (poke1->hp <= 0) return state;
 	}
@@ -126,96 +122,59 @@ State proceed(State state, RandomValue2 &random, Play myPlay) {
 	return state;
 }
 
-void each_product(vector<int> vec, function<void(vector<int>, int)> fn) {
-	int prod = 1;
-	int n = vec.size();
-	for (int x : vec) { prod *= x; }
-	//cout << "each_prodoct: " << prod << endl;
-	for (int x = 0; x < prod; x++) {
-		vector<int> v(n);
-		int y = x;
-		for (int i = 0; i < n; i++) {
-			v[i] = y % vec[i];
-			y /= vec[i];
-		}
-		fn(v, x);
-	}
-}
-
 vector<Play> legal_plays(State &state) {
 	if (state.foePokes[state.foeCurr].hp <= 0) {
-		return { Play{ PLAYTYPE_DONOTHING } };
-	}
-	if (state.myPokes[state.curr].hp <= 0) {
-		vector<Play> plays;
-		for (int i = 0; i < 3; i++) {
-			if (state.myPokes[i].hp <= 0) continue;
-			plays.push_back(Play{ PLAYTYPE_SINIDASI, 0, i });
-		}
-		return plays;
-	}
-	else {
+		return { Play{PLAYTYPE_DONOTHING} };
+	} else {
 		vector<Play> plays;
 		for (int i = 0; i < 4; i++) {
 			plays.push_back(Play{ PLAYTYPE_WAZA, state.myPokes[state.curr].wazas[i], -1 });
 		}
 		for (int i = 0; i < 3; i++) {
 			if (i == state.curr) continue;
-			if (state.myPokes[i].hp <= 0) continue;
 			plays.push_back(Play{ PLAYTYPE_CHANGE, 0, i });
 		}
 		return plays;
 	}
 }
 
-double calcProbability0(State &state, StateToDouble &cash) {
-	if (cash.find(state) != cash.end()) {
-		return cash[state];
-	}
-	PLAYER winner = get_winner(state);
-	if (winner == PLAYER_FOE) return 0.0;
-	if (winner == PLAYER_ME) return 1.0;
-	//cout << state.turn << endl;
-	double prob = 0.0;
-	for (Play play : legal_plays(state)) {
-		double pr = 0.0;
-		int numFoeMove;
-		if (play.type == PLAYTYPE_SINIDASI) {
-			numFoeMove = 1;
-		} else if (state.foePokes[state.foeCurr].hp <= 0) {
-			numFoeMove = 0;
-			for (int i = 0; i < 3; i++) {
-				if (state.foePokes[i].hp > 0) numFoeMove++;
-			}
-		} else {
-			numFoeMove = 4;
+void MonteCarlo::run_simulation() {
+	vector<State> visited_states;
+	State state = initial_state;
+	PLAYER winner = PLAYER_NONE;
+	bool expand = true;
+	for (int t = 0; t < 200; t++) {
+		vector<Play> legal = legal_plays(state);
+		Play play = legal[rnd() % legal.size()];
+		state = proceed(state, rnd, play);
+
+		if (expand && plays.find(state) == plays.end()) {
+			expand = false;
+			plays[state] = 0;
+			wins[state] = 0;
 		}
-		each_product({ 3, 2, 3, 2, numFoeMove }, [&](vector<int> v, int x) {
-			int damageRand0 = v[0];
-			int critical0 = v[1];
-			int damageRand1 = v[2];
-			int critical1 = v[3];
-			int foeMove = v[4];
-			//cout << damageRand0 << ", " << critical0 << ", " << damageRand1 << ", " << critical1 << ", " << foeMove	 << endl;
-			RandomValue2 random = { RandomValue{ damageRand0, critical0 }, RandomValue{ damageRand1, critical1 }, foeMove };
-			double p = calcProbability0(proceed(state, random, play), cash);
-			pr += p / 3 / 3 * (critical0 ? 1 : 15) / 16 * (critical1 ? 1 : 15) / 16 / numFoeMove;
-		});
-		if (prob < pr) prob = pr;
+		visited_states.push_back(state);
+
+		winner = get_winner(state);
+		if (winner) break;
 	}
-	cout << prob << endl;
-	cash[state] = prob;
-	return prob;
+	for (State state : visited_states) {
+		if (plays.find(state) == plays.end()) continue;
+		plays[state] ++;
+		if (winner == PLAYER_ME) {
+			wins[state] ++;
+			cout << "You win" << endl;
+		} else if (winner == PLAYER_FOE) {
+			cout << "You lose" << endl;
+		} else {
+			cout << "No winner" << endl;
+		}
+	}
 }
-
-double calcProbability(State &state) {
-	StateToDouble cash;
-	return calcProbability0(state, cash);
-}
-
 
 int main() {
-	State state = State{
+	MonteCarlo monte;
+	monte.initial_state = State{
 		{
 			gen_poke(starter_rank(false, 1), &ENTRIES[1], 0),
 			gen_poke(starter_rank(false, 1), &ENTRIES[2], 0),
@@ -228,6 +187,9 @@ int main() {
 		},
 		0, 0, 0,
 	};
-	cout << calcProbability(state) << endl;
+	for (int i = 0; i < 1000; i++) {
+		cout << i << endl;
+		monte.run_simulation();
+	}
 	return 0;
 }
