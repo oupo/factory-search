@@ -2,17 +2,21 @@
 
 // ref: http://www.smogon.com/dp/articles/damage_formula
 
-function calcComputedSpeed(poke) {
+function calcComputedSpeed(poke, weather) {
+	var speed = poke.speed;
 	if (poke.item == "こだわりスカーフ") {
-		return int(poke.speed * 1.5);
+		speed = int(speed * 1.5);
 	}
 	if (poke.item == "くろいてっきゅう") {
-		return int(poke.speed * 0.5);
+		speed = int(speed * 0.5);
 	}
-	return poke.speed;
+	if (poke.ability == "すいすい" && weather == "雨") {
+		speed = int(speed * 2);
+	}
+	return speed;
 }
 
-function calcDamage(userPoke, foePoke, waza, options) {
+function calcDamage(userPoke, foePoke, waza, weather, options) {
 	if (!options) options = {};
 	if (waza.effectCode == 87) {
 		return userPoke.level; // ナイトヘッドとちちゅうなげ
@@ -49,6 +53,9 @@ function calcDamage(userPoke, foePoke, waza, options) {
 	}
 	if (options.hasStatusCondition && waza.name == "からげんき") {
 		mod1 *= 2;
+	}
+	if (weather == "雨" && waza.type == "みず") {
+		mod1 *= 1.5;
 	}
 
 	var mod2 = calcMod2(userPoke);
