@@ -9,7 +9,7 @@
 
 const double SM_multiplier[] = { 2. / 8, 2. / 7, 2. / 6, 2. / 5, 2. / 4, 2. / 3, 2. / 2, 3. / 2, 4. / 2, 5. / 2, 6. / 2, 7. / 2, 8. / 2 };
 
-int calcComputedSpeed(PokeStruct * poke) {
+int calcComputedSpeed(PokeStruct *poke, State *state) {
 	int speed = poke->speed;
 	speed *= SM_multiplier[poke->speedMod + 6];
 	if (poke->statusCond == STATUSCOND_PARALYSIS) {
@@ -21,10 +21,13 @@ int calcComputedSpeed(PokeStruct * poke) {
 	if (poke->item == ITEM_くろいてっきゅう) {
 		speed *= 0.5;
 	}
+	if (state->trickRoom > 0) {
+		speed *= -1;
+	}
 	return speed;
 }
 
-bool isToZero(PokeStruct * userPoke, PokeStruct * foePoke, Waza waza) {
+bool isToZero(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza) {
 	if (waza->type == TYPE_みず && (foePoke->ability == ABIL_ちょすい || foePoke->ability == ABIL_かんそうはだ))
 		return true;
 	if (waza->type == TYPE_じめん && foePoke->ability == ABIL_ふゆう)
@@ -129,7 +132,7 @@ int calcAttack(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza) {
 		atk = atk * SM_multiplier[userPoke->spAtkMod + 6];
 	}
 
-	// ignore ヨガパワー ちからもち フラワーギフト こんじょう はりきり スロースタート プラス マイナス ソーラーパワー
+	// ignore ヨガパワー ちからもち フラワーギフト はりきり スロースタート プラス マイナス ソーラーパワー
 
 	// ignore でんきだま ふといほね こころのしずく しんかいのキバ
 	if (waza->isPhysical && userPoke->item == ITEM_こだわりハチマキ) {
@@ -155,7 +158,10 @@ int calcDefence(PokeStruct * userPoke, PokeStruct * foePoke, Waza waza) {
 		def = def * SM_multiplier[foePoke->spDefMod + 6];
 	}
 
-	// ignore じばく だいばくはつ
+	if (waza->no() == WAZA_じばく || waza->no() == WAZA_だいばくはつ) {
+		def *= 0.5;
+	}
+
 	// ignore メタルパウダー ふしぎなうろこ こころのしずく しんかいのウロコ
 	// ignore 砂嵐下での岩タイプの特防アップ フラワーギフト
 
@@ -181,8 +187,7 @@ int calcDamage(PokeStruct *userPoke, PokeStruct *foePoke, Waza waza, mt19937 &rn
 	if (waza->power == 0) return 0;
 	if (isToZero(userPoke, foePoke, waza)) return 0;
 	double ch = 1;
-	//int r = 85 + rnd() % 16;
-	int r = 85 + rnd() % 4 * 15 / 3;
+	int r = 85 + rnd() % 16;
 	
 	if (rnd() % 16 == 0) {
 		ch = 2;
