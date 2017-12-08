@@ -2,7 +2,7 @@
 
 // ref: http://www.smogon.com/dp/articles/damage_formula
 
-function calcComputedSpeed(poke, weather) {
+function calcComputedSpeed(poke, weather, trickRoom) {
 	var speed = poke.speed;
 	if (poke.item == "こだわりスカーフ") {
 		speed = int(speed * 1.5);
@@ -12,6 +12,9 @@ function calcComputedSpeed(poke, weather) {
 	}
 	if (poke.ability == "すいすい" && weather == "雨") {
 		speed = int(speed * 2);
+	}
+	if (trickRoom) {
+		return -speed;
 	}
 	return speed;
 }
@@ -157,6 +160,9 @@ function calcAttack(userPoke, foePoke, waza, options) {
 	if (waza.isPhysical && userPoke.item == "こだわりハチマキ") {
 		atk = int(atk * 1.5);
 	}
+	if (waza.isPhysical && userPoke.item == "ふといホネ") {
+		atk = int(atk * 2);
+	}
 	if (!waza.isPhysical && userPoke.item == "こだわりメガネ") {
 		atk = int(atk * 1.5);
 	}
@@ -166,6 +172,10 @@ function calcAttack(userPoke, foePoke, waza, options) {
 function calcDefence(userPoke, foePoke, waza) {
 	var def = waza.isPhysical ?  foePoke.def :  foePoke.spDef;
 	
+	if (waza.name == "だいばくはつ") {
+		def *= 0.5;
+	}
+
 	// ignore 能力変化
 	// ignore じばく だいばくはつ
 	// ignore メタルパウダー ふしぎなうろこ こころのしずく しんかいのウロコ

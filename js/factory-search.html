@@ -273,60 +273,90 @@ function judge_seed_lv50_shuu4(seed, dbg) {
 	var num_bonus = 1;
 	var trainers = rand_trainers(lcg, shuu, is_hgss);
 	var entries = rand_starter_entries(lcg, is_open_level, shuu, num_bonus);
-	var hasamu_idx = entries.map(x => x.id).indexOf(423);
-	if (hasamu_idx < 0) return;
+	var hapi_idx = entries.map(x => x.id).indexOf(611);
+	if (hapi_idx < 0) return;
 	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
-	var suba = gen_poke(trainer_rank(false, 3), factory_data[289], 0);
-	var idx = starters.findIndex(x => win_1turn(x, suba));
-	if (idx < 0) return;
-	var idx2 = [0,1,2,3,4,5].filter(i => i != hasamu_idx && i != idx).sort((a, b) => sum_base(starters[b]) - sum_base(starters[a]))[0];
-	var hasamu = starters[hasamu_idx];
+	var idx = [0,1,2,3,4,5].filter(i => i != hapi_idx).sort((a, b) => sum_base(starters[b]) - sum_base(starters[a]))[0];
+	var idx2 = [0,1,2,3,4,5].filter(i => i != hapi_idx).sort((a, b) => sum_base(starters[b]) - sum_base(starters[a]))[1];
+	var hapi = starters[hapi_idx];
 	var suke1 = starters[idx];
 	var suke2 = starters[idx2];
-	var playerPokes = [hasamu, suke1, suke2];
+	var playerPokes = [suke1, hapi, suke2];
+	if (hapi.ability != "しぜんかいふく") return;
 	var exchange = [];
-	exchange.push([0, suke1]);
+	exchange.push([0, suke1, suke2]);
 	lcg.step(2); // shuffle
-
-	var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[0]);
-	var pokes = rand_enemy_poke(lcg, rank, starters.map(function(x){return x.entry}));
-	rand_gap(lcg, shuu, 1, rank);
-	var prev = pokes;
 
 	var ng_abilities = [
 		["ゆうばく", "ほうし"],
-		["ゆうばく", "ほうし"],
+		[],
 		["ゆうばく", "ほうし"]
 	];
-
-	var winnable_history = [];
-
-	var subaIdx = pokes.findIndex(x => x.entry.id == 289);
-	if (subaIdx < 0) {
-		return false;
-	}
-	var ret;
-	//var ret = completely_winnable(playerPokes, pokes, ng_abilities, false, false, false);
-	//if (!ret) return false;
-	winnable_history.push(pokes);
-	winnable_history.push(ret);
-	for (var i = 2; i <= 7; i ++) {
-		var seen = playerPokes.concat(prev);
-		if (i == 2) {
-			playerPokes[2] = pokes[subaIdx];
+	var prev;
+	for (var i = 1; i <= 7; i ++) {
+		var seen = i == 1 ? starters : playerPokes.concat(prev);
+		if (i > 1) {
+			var poke = prev.sort((a, b) => sum_base(b) - sum_base(a))[0];
+			if (sum_base(playerPokes[2]) < sum_base(poke)) {
+				exchange.push([i, poke]);
+				playerPokes[2] = poke;
+			}
 		}
 		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
 		var pokes = rand_enemy_poke(lcg, rank, seen.map(function(x){return x.entry}));
 		prev = pokes;
 		rand_gap(lcg, shuu, i, rank);
-		var ret = rank.rank < 4;
-		if (!ret) ret = completely_winnable(playerPokes, pokes, ng_abilities, false, false, false);
-		if (!ret) return false;
-		winnable_history.push(pokes);
-		winnable_history.push(ret);
+		if (rank.rank > 3) {
+			var ret = completely_winnable(playerPokes, pokes, ng_abilities, true, true);
+			if (!ret) return;
+		}
+	}
+	if (exchange.length >= 2) {
+		console.log(seed);
+		console.log(exchange);
+	}
+}
+
+function judge_seed_lv50_shuu5(seed, dbg) {
+	var lcg = new LCG(seed);
+	var shuu = 5;
+	var is_open_level = false;
+	var is_hgss = false;
+	var num_bonus = 2;
+	var trainers = rand_trainers(lcg, shuu, is_hgss);
+	var entries = rand_starter_entries(lcg, is_open_level, shuu, num_bonus);
+	var hapi_idx = entries.map(x => x.id).indexOf(611);
+	var nasi_idx = entries.map(x => x.id).indexOf(721);
+	var gara_idx = entries.map(x => x.id).indexOf(636);
+	var pori_idx = entries.map(x => x.id).indexOf(607);
+	if (hapi_idx < 0 || nasi_idx < 0 || gara_idx < 0) return;
+	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
+	var playerPokes = [starters[nasi_idx], starters[hapi_idx], starters[gara_idx]];
+	lcg.step(2); // shuffle
+
+	var ng_abilities = [
+		["ゆうばく", "ほうし"],
+		[],
+		["ゆうばく", "ほうし"]
+	];
+	var prev;
+	for (var i = 1; i <= 1; i ++) {
+		var seen = i == 1 ? starters : playerPokes.concat(prev);
+		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
+		var pokes = rand_enemy_poke(lcg, rank, seen.map(x => x.entry));
+		prev = pokes;
+		rand_gap(lcg, shuu, i, rank);
+		console.log(seed+", "+pokes.map(x => x.name + "(" + x.item + ")").join(" "));
+		var ret = completely_winnable(playerPokes, pokes, ng_abilities, true, true);
+		if (!ret) return;
 	}
 	console.log(seed);
-	console.log(winnable_history);
+	console.log(ret);
+}
+
+function weaker_than_hapi(poke) {
+	if (poke.type1 == "はがね" || poke.type2 == "はがね" || poke.type1 == "どく" || poke.type2 == "どく") return false;
+	return poke.waza.every(w => waza_fromname[w].basePower == 0 || !waza_fromname[w].isPhysical);
 }
 
 function win_1turn(my, foe) {
@@ -420,16 +450,12 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg, cons
 	var justAfterFoeExchanged = true;
 	var atkMod = 0;
 	var weather = "";
+	var trickRoom = false;
 	var history = [];
-	var baton = false;
 
 	var stack = [];
 
 	var ret = winnable();
-	if (baton) {
-		console.log(ret);
-		console.log(foes.map(x => [x.name, calcDamage(mys[2], x, waza_fromname[mys[2].waza[0]], "", {hasStatusCondition: true}), x.hp]));
-	}
 	return ret;
 
 	function stackPush() {
@@ -443,6 +469,7 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg, cons
 			justAfterFoeExchanged: justAfterFoeExchanged,
 			atkMod: atkMod,
 			weather: weather,
+			trickRoom: trickRoom,
 			history: history.slice(0)
 		});
 		justAfterFoeExchanged = false;
@@ -458,6 +485,7 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg, cons
 		justAfterFoeExchanged = popped.justAfterFoeExchanged;
 		atkMod = popped.atkMod;
 		weather = popped.weather;
+		trickRoom = popped.trickRoom;
 		history  = popped.history;
 	}
 	function winnable() {
@@ -511,8 +539,17 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg, cons
 		if (justAfterFoeExchanged && (foe.ability == "いかく" || (my.ability == "いかく" && foe.ability == "トレース"))) {
 			atkMod -= 1;
 		}
+		if (my.entry.id == 611 && weaker_than_hapi(foe)) {
+			console.log("ハピ");
+			stackPush();
+			foeHps[foeCurr] = 0;
+			history.push("ハピで"+foe.name+"を倒す");
+			var r = winnable();
+			stackPop();
+			if (r) return r;
+		}
 		// たたかう場合
-		if (calcComputedSpeed(my, weather) <= calcComputedSpeed(foe, weather)) {
+		if (calcComputedSpeed(my, weather, trickRoom) <= calcComputedSpeed(foe, weather, trickRoom)) {
 			// 素早さ負ける
 			var ret = action(true, false);
 			var ret2 = considerMyCritical ? action(true, true) : true;
@@ -591,9 +628,11 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg, cons
 		if (speedLoss && my.ability == "すいすい" && weather == "" && my.waza.some((w) => w == "あまごい") && calcComputedSpeed(my, "雨") > calcComputedSpeed(foe, "雨")) {
 			wazas_dmgs.push([waza_fromname["あまごい"], 0]);
 		} else if (speedLoss && my.waza.some((w) => w == "バトンタッチ") &&
-			[0,1,2].findIndex(i => mys[i].item == "どくどくだま" && myHps[i] > 0 &&
-				foes.every(x => calcComputedSpeed(x) < calcComputedSpeed(mys[i]))) >= 0) {
+		[0,1,2].findIndex(i => mys[i].item == "どくどくだま" && myHps[i] > 0 &&
+			foes.every(x => calcComputedSpeed(x) < calcComputedSpeed(mys[i]))) >= 0) {
 			wazas_dmgs.push([waza_fromname["バトンタッチ"], 0]);
+		} else if (speedLoss && my.waza.some((w) => w == "トリックルーム")) {
+			wazas_dmgs.push([waza_fromname["トリックルーム"], 0]);
 		}
 		var dmg = 0;
 		var waza;
@@ -655,8 +694,14 @@ function completely_winnable(mys, foes, ng_abilities, allowExchange, nodbg, cons
 			}
 			if (waza.name == "バトンタッチ") {
 				curr = [0,1,2].find((i) => mys[i].item == "どくどくだま" && myHps[i] > 0);
-				console.log("バトンタッチ!!");
-				baton = true;
+			}
+			if (waza.name == "だいばくはつ") {
+				myHps[curr] = 0;
+				console.log("だいばくはつ");
+			}
+			if (waza.name == "トリックルーム") {
+				trickRoom = true;
+				console.log("トリックルーム");
 			}
 			if (senseiWaza) {
 				history.push(foe.name+"が"+my.name+"に"+senseiWaza+"("+myDmg+")");
