@@ -26,7 +26,8 @@ function main_search_seed(judge_seed, start, end) {
 				console.log("finish");
 				return;
 			}
-			if (judge_seed(i ++)) return;
+			//if (judge_seed(i ++)) return;
+			judge_seed(i ++);
 			if ((i & 0xffff) == 0) break;
 		}
 		setTimeout(loop, 0);
@@ -325,33 +326,64 @@ function judge_seed_lv50_shuu5(seed, dbg) {
 	var num_bonus = 2;
 	var trainers = rand_trainers(lcg, shuu, is_hgss);
 	var entries = rand_starter_entries(lcg, is_open_level, shuu, num_bonus);
-	var hapi_idx = entries.map(x => x.id).indexOf(611);
-	var nasi_idx = entries.map(x => x.id).indexOf(721);
-	var gara_idx = entries.map(x => x.id).indexOf(636);
+	//var hapi_idx = entries.map(x => x.id).indexOf(611);
+	//var nasi_idx = entries.map(x => x.id).indexOf(721);
+	//var gara_idx = entries.map(x => x.id).indexOf(636);
 	var pori_idx = entries.map(x => x.id).indexOf(607);
-	if (hapi_idx < 0 || nasi_idx < 0 || gara_idx < 0) return;
+	var gyara_idx = entries.map(x => x.id).indexOf(608);
+	if (pori_idx < 0 || gyara_idx < 0) return;
 	var starters = starter_entiries_to_poke(is_open_level, shuu, 0, entries, rand_pid(lcg, entries));
-	var playerPokes = [starters[nasi_idx], starters[hapi_idx], starters[gara_idx]];
 	lcg.step(2); // shuffle
 
-	var ng_abilities = [
-		["ゆうばく", "ほうし"],
-		[],
-		["ゆうばく", "ほうし"]
-	];
-	var prev;
-	for (var i = 1; i <= 1; i ++) {
-		var seen = i == 1 ? starters : playerPokes.concat(prev);
+	for (var idx = 0; idx < 6; idx ++) {
+		var l = new LCG(lcg.seed);
+		if (idx == pori_idx || idx == gyara_idx) continue;
+		var suke_first = starters[idx];
+		var playerPokes = [starters[pori_idx], starters[gyara_idx], suke_first];
+		var hist;
+		if (hist = judge(1, lcg.seed, null, playerPokes, starters, null)) {
+			console.log([seed, [suke_first].concat(hist).map(x => x ? x.name : "")]);
+			return true;
+		}
+	}
+	return false;
+
+	function judge(i, seed, oldPlayerPokes, playerPokes, starters, prev) {
+		if (i == 7 + 1) return [];
+		
+		var lcg = new LCG(seed);
+		var seen = i == 1 ? starters : oldPlayerPokes.concat(prev);
 		var rank = trainer_id_to_rank(is_open_level, is_hgss, trainers[i-1]);
 		var pokes = rand_enemy_poke(lcg, rank, seen.map(x => x.entry));
-		prev = pokes;
-		rand_gap(lcg, shuu, i, rank);
-		console.log(seed+", "+pokes.map(x => x.name + "(" + x.item + ")").join(" "));
-		var ret = completely_winnable(playerPokes, pokes, ng_abilities, true, true);
-		if (!ret) return;
+		var ret = winnable3(playerPokes, pokes);
+		if (ret) {
+			rand_gap(lcg, shuu, i, rank);
+			for (var j = 0; j < 4; j ++) {
+				var newPlayerPokes = playerPokes.concat();
+				if (j > 0) newPlayerPokes[2] = pokes[j - 1];
+				var hist;
+				if (hist = judge(i + 1, lcg.seed, playerPokes, newPlayerPokes, starters, pokes)) {
+					return [pokes[j - 1]].concat(hist);
+				}
+			}
+		} else {
+			return false;
+		}
 	}
 	console.log(seed);
-	console.log(ret);
+}
+
+function winnable3(playerPokes, pokes) {
+	var OK_RANK4 = [363, 382, 395, 396, 407, 427, 429, 439, 451, 460, 462, 465, 485];
+	var OK_RANK5 = [499, 500, 507, 505, 511, 523, 530, 531, 532, 557, 565, 555, 572, 577, 575, 578, 585, 596, 601, 605, 612];
+	var OK_RANK6 = [636, 644, 654, 683, 699, 708];
+	var OK = OK_RANK4.concat(OK_RANK5).concat(OK_RANK6);
+	var NG_ITEMS = ["きあいのタスキ", "きあいのハチマキ", "のんきのおこう", "ひかりのこな", "せんせいのつめ"];
+	var NG_WAZAS = ["こらえる"];
+	if (OK.indexOf(pokes[0].entry.id) < 0) return false;
+	if (NG_ITEMS.indexOf(pokes[1].item) >= 0 || NG_ITEMS.indexOf(pokes[2].item) >= 0) return false;
+	if (pokes.slice(1).some(x => x.waza.some(w => NG_WAZAS.indexOf(w) >= 0))) return false;
+	return true; 
 }
 
 function weaker_than_hapi(poke) {
